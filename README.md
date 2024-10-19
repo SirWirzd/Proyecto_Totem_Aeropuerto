@@ -1,11 +1,10 @@
 # Proyecto Totem Aeropuerto
 
-#Integrantes:
-
-# Giafranco Astorga Saco
-# Ernesto Starck
-# Sebastián Bustamante
-# David Ñanculeo
+Integrantes:
+- Giafranco Astorga Saco
+- Ernesto Starck
+- Sebastián Bustamante
+- David Ñanculeo
 
 # TRABAJO 2 DE BASES DE DATOS AVANZADA (2024)
 # Prof. Angélica Urrutia Sepúlveda
@@ -24,9 +23,6 @@ una presentación de 5 minutos).
 
 ![image](https://github.com/user-attachments/assets/ea5c7e1c-743b-48e5-b336-2eb44f09c63c)
 
-Rúbrica Puntos
-Diseño de la Base de datos con restricciones con trigger 1,5
-Procedimiento insert, update y delete con control de errores y concurrencia 2
-Trigger valide reglas de negocio 1
-Introducción y Conclusión 0,5
-Presentación oral en clases 2
+Trabajo de dos personas:
+• Fecha de presentación oral 22 de octubre en clases
+• Subir a efinis antes del 31 a las 23:59 el informe
