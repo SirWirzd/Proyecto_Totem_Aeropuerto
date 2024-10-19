@@ -1,12 +1,14 @@
 # Proyecto Totem Aeropuerto
 
 Integrantes:
-- Giafranco Astorga Saco
+
+- Gianfranco Astorga Saco
 - Ernesto Starck
 - Sebastián Bustamante
 - David Ñanculeo
 
 # TRABAJO 2 DE BASES DE DATOS AVANZADA (2024)
+
 # Prof. Angélica Urrutia Sepúlveda
 
 I. A partir de este trabajo se diseña el proyecto final que se compone de un
