@@ -28,7 +28,9 @@ DROP TABLE ASISTENCIA CASCADE CONSTRAINTS;
 CREATE TABLE PAIS(
     id_pais NUMBER NOT NULL,
     nombre VARCHAR2(100) NOT NULL,
-    CONSTRAINT PK_PAIS PRIMARY KEY (id_pais)
+    visa_requerida VARCHAR2(20),
+    CONSTRAINT PK_PAIS PRIMARY KEY (id_pais),
+    CONSTRAINT chck_visa_pais CHECK (visa_requerida IN ('Sí', 'No'))
 );
 
 CREATE TABLE CIUDAD(
@@ -61,9 +63,9 @@ CREATE TABLE PASAJERO(
     apellido VARCHAR2(100) NOT NULL,
     fecha_nacimiento DATE NOT NULL,
     documento_identidad VARCHAR(20) NOT NULL,
+    edad NUMBER,
     CONSTRAINT PK_PASAJERO PRIMARY KEY (id_pasajero),
-    CONSTRAINT chck_documento_identidad CHECK (LENGTH(documento_identidad) <= 9),
-    CONSTRAINT chck_fecha_nacimiento CHECK (fecha_nacimiento < SYSDATE)
+    CONSTRAINT chck_documento_identidad CHECK (LENGTH(documento_identidad) <= 9)
 );
 
 CREATE TABLE VUELO(
@@ -164,6 +166,58 @@ CREATE SEQUENCE seq_equipaje START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE seq_servicio START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE seq_servicios_pasajero START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE seq_asistencia START WITH 1 INCREMENT BY 1;
+
+-- Procedimiento para validar el documento de identidad
+CREATE OR REPLACE PROCEDURE VALIDACION (
+    p_documento_identidad IN VARCHAR2
+) IS
+    documento_identidad_invalido EXCEPTION;
+BEGIN
+    IF REGEXP_LIKE(p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$') THEN
+        NULL;
+    ELSIF REGEXP_LIKE(p_documento_identidad, '^[0-9]{9}$') AND LENGHT(documento_identidad)<= 9 THEN
+        NULL;
+    ELSE
+        RAISE documento_identidad_invalido;
+    END IF;
+EXCEPTION
+    WHEN documento_identidad_invalido THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Documento de identidad inválido.');
+END;
+/
+
+-- Trigger para estandarizar los datos de un pasajero
+CREATE OR REPLACE TRIGGER TRG_ESTANDARIZAR_DATOS_PASAJERO
+BEFORE INSERT ON PASAJERO
+FOR EACH ROW
+DECLARE
+    documento_identidad_invalido EXCEPTION;
+    pasajero_duplicado EXCEPTION;
+    contador NUMBER;
+BEGIN
+    -- Validar el documento de identidad
+    VALIDACION(:NEW.documento_identidad);
+
+    -- Verificar si el pasajero ya existe
+    SELECT COUNT(*)
+    INTO contador
+    FROM PASAJERO
+    WHERE documento_identidad = :NEW.documento_identidad;
+
+
+    IF contador = 0 THEN
+        :NEW.nombre = UPPER(:NEW.nombre);
+        :NEW.apellido = UPPER(:NEW.apellido);
+        :NEW.edad = EXTRACT(YEAR FROM SYSDATE) - EXTRACT(YEAR FROM :NEW.fecha_nacimiento);
+    ELSE
+        RAISE pasajero_duplicado;
+    END IF;
+EXCEPTION
+    WHEN pasajero_duplicado THEN
+        RAISE_APPLICATION_ERROR(-20002, 'El pasajero ya existe.');    
+END;
+/
+
 
 -- Trigger para validad si un asiento está disponible
 
