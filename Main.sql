@@ -206,9 +206,9 @@ BEGIN
 
 
     IF contador = 0 THEN
-        :NEW.nombre = UPPER(:NEW.nombre);
-        :NEW.apellido = UPPER(:NEW.apellido);
-        :NEW.edad = EXTRACT(YEAR FROM SYSDATE) - EXTRACT(YEAR FROM :NEW.fecha_nacimiento);
+        :NEW.nombre := UPPER(:NEW.nombre);
+        :NEW.apellido := UPPER(:NEW.apellido);
+        :NEW.edad := EXTRACT(YEAR FROM SYSDATE) - EXTRACT(YEAR FROM :NEW.fecha_nacimiento);
     ELSE
         RAISE pasajero_duplicado;
     END IF;
@@ -217,7 +217,6 @@ EXCEPTION
         RAISE_APPLICATION_ERROR(-20002, 'El pasajero ya existe.');    
 END;
 /
-
 
 -- Trigger para validad si un asiento está disponible
 
