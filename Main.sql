@@ -224,18 +224,18 @@ CREATE OR REPLACE TRIGGER TRG_VALIDA_ASIENTO_DISPONIBLE
 BEFORE INSERT ON RESERVA
 FOR EACH ROW
 DECLARE
-    v_asiento_ocupado NUMBER;
+    v_asiento_disponible VARCHAR2(20);
 BEGIN
-    SELECT COUNT(*)
-    INTO v_asiento_ocupado
-    FROM RESERVA
-    WHERE id_vuelo = :NEW.id_vuelo 
-    AND id_asiento = :NEW.id_asiento
-    AND estado = 'Confirmado';
+    SELECT estado
+    INTO v_asiento_disponible
+    FROM ASIENTO
+    WHERE id_asiento = :NEW.id_asiento
+    AND id_vuelo = :NEW.id_vuelo;
 
-    IF v_asiento_ocupado > 0 THEN
-        RAISE_APPLICATION_ERROR(-20001, 'Asiento ya está ocupado');
-    END IF;
+
+    IF v_asiento_disponible = 'No disponible' THEN
+        RAISE_APPLICATION_ERROR(-20001, 'El asiento ya está ocupado o no disponible.');
+    END IF;
 END;
 
 -- Trigger para verificar visa
