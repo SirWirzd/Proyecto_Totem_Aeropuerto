@@ -448,3 +448,39 @@ BEGIN
     DBMS_OUTPUT.PUT_LINE('Total pagado: ' || p_total_pago || ' CLP.');
 END;
 /
+
+-- Procedimiento para cancelar una compra
+CREATE OR REPLACE PROCEDURE cancelar_compra (
+    p_id_compra NUMBER
+) 
+IS
+    v_id_vuelo NUMBER;
+    v_id_asiento NUMBER;
+BEGIN
+    SELECT id_vuelo_comp, id_asiento
+    FROM COMPRA
+    WHERE id_compra = p_id_compra
+
+    BEGIN
+        SELECT id_asiento
+        INTO v_id_asiento
+        FROM RESERVA
+        WHERE id_vuelo_res = v_id_vuelo;
+        AND id_pasajero_res = (SELECT id_pasajero_comp FROM COMPRA WHERE id_compra = p_id_compra);
+
+        UPDATE ASIENTO
+        SET estado = 'Disponible'
+        WHERE id_asiento = v_id_asiento;
+
+        DELETE FROM RESERVA
+        WHERE id_vuelo_res = v_id_vuelo;
+        AND id_pasajero_res = (SELECT id_pasajero_comp FROM COMPRA WHERE id_compra = p_id_compra);
+    
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20001, 'No se encontró la compra con el ID especificado.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20002, 'Ha ocurrido un error al intentar cancelar la compra.');
+END;
+/
