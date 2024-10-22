@@ -194,12 +194,12 @@ END;
 
 -- Trigger para verificar visa
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_VISA
-BEFORE INSERT ON PAIS
-FOR EACH ROW
-BEGIN
-    IF (:NEW.nombre = 'Estados Unidos' OR :NEW.nombre = 'Canadá') THEN
-        RAISE_APPLICATION_ERROR(-20002, 'Se requiere visa para ingresar a ' || :NEW.nombre);
-    END IF;
+    BEFORE INSERT ON PAIS
+    FOR EACH ROW
+    BEGIN
+        IF (:NEW.nombre = 'Estados Unidos' OR :NEW.nombre = 'Canadá') THEN
+            RAISE_APPLICATION_ERROR(-20002, 'Se requiere visa para ingresar a ' || :NEW.nombre);
+        END IF;
 END;
 
 -- Trigger para actualizar el estado de vuelo
