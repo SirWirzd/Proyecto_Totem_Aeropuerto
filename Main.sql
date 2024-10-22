@@ -260,6 +260,85 @@ BEGIN
     END IF;
 END;
 
+-- Trigger para actualizar el estado de equipaje
+
+CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_EQUIPAJE
+AFTER INSERT OR UPDATE ON EQUIPAJE
+FOR EACH ROW
+BEGIN
+    IF (:NEW.peso > 20) THEN
+        UPDATE EQUIPAJE
+        SET estado = 'Sobrepeso' 
+        WHERE id_equipaje = :NEW.id_equipaje;
+    END IF;
+END;
+
+-- Trigger para actualizar el estado de servicios
+
+CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_SERVICIOS
+AFTER INSERT OR UPDATE ON SERVICIOS_PASAJERO
+FOR EACH ROW
+BEGIN
+    IF (:NEW.precio_servicio > 100000) THEN
+        UPDATE SERVICIOS_PASAJERO
+        SET estado = 'Caro' 
+        WHERE id_servicio_pasajero = :NEW.id_servicio_pasajero;
+    END IF;
+END;
+
+-- Trigger para actualizar el monto total de la compra
+
+CREATE OR REPLACE TRIGGER RECUENTO_TOTAL_COMPRA
+AFTER INSERT OR UPDATE ON COMPRA
+FOR EACH ROW
+BEGIN
+    UPDATE COMPRA
+    SET monto_total_compra = (SELECT SUM(precio_servicio) FROM SERVICIOS_PASAJERO WHERE id_pasajero_ser = :NEW.id_pasajero_comp)
+    WHERE id_compra = :NEW.id_compra;
+END;
+
+-- Trigger para liberar y eliminar asientos al cancelar una compra
+
+CREATE OR REPLACE TRIGGER LIBERAR_ASIENTOS
+AFTER DELETE ON COMPRA
+FOR EACH ROW
+BEGIN
+    DELETE FROM RESERVA
+    WHERE id_pasajero_res = :OLD.id_pasajero_comp;
+END;
+
+-- Trigger para liberar y eliminar asientos al cancelar una reserva
+
+CREATE OR REPLACE TRIGGER LIBERAR_ASIENTOS_RESERVA
+AFTER DELETE ON RESERVA
+FOR EACH ROW
+BEGIN
+    DELETE FROM RESERVA
+    WHERE id_pasajero_res = :OLD.id_pasajero_res;
+END;
+
+-- Trigger verificar peso del equipaje
+
+CREATE OR REPLACE TRIGGER VERIFICAR_PESO_EQUIPAJE
+BEFORE INSERT ON EQUIPAJE
+FOR EACH ROW
+BEGIN
+    IF (:NEW.peso > 20) THEN
+        RAISE_APPLICATION_ERROR(-20002, 'El peso del equipaje no puede superar los 20 kg.');
+    END IF;
+END;
+
+-- Trigger para actualizar de un vuelo al reservar o liberar un asiento
+
+CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO_RESERVA
+AFTER INSERT OR DELETE ON RESERVA
+FOR EACH ROW
+BEGIN
+    UPDATE VUELO
+    SET estado = 'En vuelo' 
+    WHERE id_vuelo = :NEW.id_vuelo_res;
+END;
+
 -- Procedimiento para confirmar una compra y generar el ticket
 
 CREATE OR REPLACE PROCEDURE confirmar_compra (
