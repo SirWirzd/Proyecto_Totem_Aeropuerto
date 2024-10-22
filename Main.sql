@@ -192,6 +192,16 @@ BEGIN
     END IF;
 END;
 
+-- Trigger para verificar visa
+CREATE OR REPLACE TRIGGER TRG_VERIFICAR_VISA
+BEFORE INSERT ON PAIS
+FOR EACH ROW
+BEGIN
+    IF (:NEW.nombre = 'Estados Unidos' OR :NEW.nombre = 'Canadá') THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Se requiere visa para ingresar a ' || :NEW.nombre);
+    END IF;
+END;
+
 -- Trigger para actualizar el estado de vuelo
 
 CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO
@@ -273,47 +283,44 @@ CREATE OR REPLACE PROCEDURE confirmar_compra (
     v_asiento_disponible NUMBER;  
 BEGIN
     -- Verificar si el vuelo existe
-    DECLARE
-        v_vuelo_existente NUMBER;
-    BEGIN
-        SELECT COUNT(*)
-        INTO v_vuelo_existente
-        FROM VUELO
-        WHERE id_vuelo = p_id_vuelo;
-
-        IF v_vuelo_existente = 0 THEN
-            RAISE_APPLICATION_ERROR(-20002, 'Vuelo no encontrado.');
-        END IF;
-    END;
+    IF NOT EXISTS (SELECT 1 FROM VUELO WHERE id_vuelo = p_id_vuelo) THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Vuelo no encontrado.');
+    END IF;
 
     -- Verificar disponibilidad del asiento
     SELECT COUNT(*)
     INTO v_asiento_disponible
     FROM RESERVA
-    WHERE id_vuelo_res = p_id_vuelo AND id_asiento = p_asiento AND estado = 'Reservado';
+    WHERE id_vuelo = p_id_vuelo AND asiento = p_asiento AND estado = 'Reservado';
 
     IF v_asiento_disponible > 0 THEN
         RAISE_APPLICATION_ERROR(-20003, 'Asiento ya reservado.');
     END IF;
 
--- Insertar la compra
-    INSERT INTO COMPRA (id_pasajero_comp, id_vuelo_comp, fecha_compra, monto_total_compra, motivo_viaje)
-    VALUES (p_id_pasajero, p_id_vuelo, SYSDATE, p_total_pago, 'Vacaciones');
+    -- Registrar la compra en la tabla COMPRA
+
+    INSERT INTO COMPRA (id_compra, id_pasajero, id_vuelo, fecha_compra, total_pago)
+    VALUES (seq_compra.NEXTVAL, p_id_pasajero, p_id_vuelo, SYSDATE, p_total_pago);
+
+    -- Registrar la reserva del asiento
+
+    INSERT INTO RESERVA (id_reserva, id_vuelo, id_pasajero, asiento, estado)
+    VALUES (seq_reserva.NEXTVAL, p_id_vuelo, p_id_pasajero, p_asiento, 'Reservado');
+
+    -- Registrar servicios adicionales si existen
     
-    -- Insertar la reserva
-    INSERT INTO RESERVA (id_pasajero_res, id_vuelo_res, id_asiento, fecha_reserva)
-    VALUES (p_id_pasajero, p_id_vuelo, p_asiento, SYSDATE);
+    IF p_servicios IS NOT NULL THEN
+        INSERT INTO SERVICIOS_PASAJERO (id_servicio_pasajero, id_pasajero, descripcion, maletas)
+        VALUES (seq_servicios_pasajero.NEXTVAL, p_id_pasajero, p_servicios, p_maletas);
+    END IF;
 
-    -- Insertar el equipaje
-    INSERT INTO EQUIPAJE (id_pasajero_eq, id_vuelo_eq, peso, descripcion)
-    VALUES (p_id_pasajero, p_id_vuelo, p_maletas, 'Maletas de vacaciones');
+    -- Actualizar estado del asiento a 'Reservado'
+    UPDATE ASIENTO
+    SET estado = 'Reservado'
+    WHERE numero_asiento = p_asiento AND id_vuelo = p_id_vuelo;
 
-    -- Insertar los servicios
-    INSERT INTO SERVICIOS_PASAJERO (id_pasajero_ser, nombre_servicio, precio_servicio)
-    VALUES (p_id_pasajero, p_servicios, p_total_pago);
 
     -- Mensaje de confirmación
-
     COMMIT;
     DBMS_OUTPUT.PUT_LINE('Compra confirmada para el pasajero ' || p_id_pasajero_comp || ' en el vuelo ' || p_id_vuelo_comp || ' con el asiento ' || p_asiento);
     DBMS_OUTPUT.PUT_LINE('Compra confirmada para el vuelo ' || p_id_vuelo || '. Asiento ' || p_asiento || ' reservado.');
