@@ -185,38 +185,24 @@ EXCEPTION
         RAISE_APPLICATION_ERROR(-20001, 'Documento de identidad inválido.');
 END;
 /
-
--- Trigger para estandarizar los datos de un pasajero
-CREATE OR REPLACE TRIGGER TRG_ESTANDARIZAR_DATOS_PASAJERO
-BEFORE INSERT ON PASAJERO
-FOR EACH ROW
-DECLARE
-    documento_identidad_invalido EXCEPTION;
-    pasajero_duplicado EXCEPTION;
-    contador NUMBER;
+-- Trigger para validar el documento de identidad
+CREATE OR REPLACE TRIGGER TRG_VALIDAR_PASAJERO 
+BEFORE INSERT OR UPDATE ON PASAJERO 
+FOR EACH ROW 
 BEGIN
-    -- Validar el documento de identidad
-    VALIDACION(:NEW.documento_identidad);
-
-    -- Verificar si el pasajero ya existe
-    SELECT COUNT(*)
-    INTO contador
-    FROM PASAJERO
-    WHERE documento_identidad = :NEW.documento_identidad;
-
-
-    IF contador = 0 THEN
-        :NEW.nombre := UPPER(:NEW.nombre);
-        :NEW.apellido := UPPER(:NEW.apellido);
-        :NEW.edad := EXTRACT(YEAR FROM SYSDATE) - EXTRACT(YEAR FROM :NEW.fecha_nacimiento);
-    ELSE
-        RAISE pasajero_duplicado;
+    -- Verificar que la fecha de nacimiento no sea futura
+    IF :NEW.fecha_nacimiento >= SYSDATE THEN
+        RAISE_APPLICATION_ERROR(-20001, 'La fecha de nacimiento no puede ser futura.'); 
+    END IF; 
+    -- Verificar que el documento de identidad no exceda los 9 caracteres 
+    IF LENGTH(:NEW.documento_identidad) > 9 THEN 
+        RAISE_APPLICATION_ERROR(-20002, 'El documento de identidad no puede exceder los 9 caracteres.'); 
+    END IF; 
+    -- Verificar que el pasajero sea mayor de edad (18 años o más) 
+    IF (SYSDATE - :NEW.fecha_nacimiento) / 365 < 18 THEN
+        RAISE_APPLICATION_ERROR(-20003, 'El pasajero debe ser mayor de edad.'); 
     END IF;
-EXCEPTION
-    WHEN pasajero_duplicado THEN
-        RAISE_APPLICATION_ERROR(-20002, 'El pasajero ya existe.');    
 END;
-/
 
 -- Trigger para validad si un asiento está disponible
 
@@ -235,18 +221,28 @@ BEGIN
 
     IF v_asiento_disponible = 'No disponible' THEN
         RAISE_APPLICATION_ERROR(-20001, 'El asiento ya está ocupado o no disponible.');
-    END IF;
+    END IF;
 END;
 
 -- Trigger para verificar visa
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_VISA
-    BEFORE INSERT ON PAIS
-    FOR EACH ROW
-    BEGIN
-        IF (:NEW.nombre = 'Estados Unidos' OR :NEW.nombre = 'Canadá') THEN
-            RAISE_APPLICATION_ERROR(-20002, 'Se requiere visa para ingresar a ' || :NEW.nombre);
-        END IF;
+BEFORE INSERT ON PAIS
+FOR EACH ROW
+BEGIN
+    IF :NER.visa_requerida = 'Sí' THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Se requiere visa para ingresar a ' || :NEW.nombre);
+    END IF;
 END;
+/
+
+-- Trigger para verificar la duración del vuelo
+CREATE OR REPLACE TRIGGER TRG_VERIFICAR_DURACION
+BEFORE INSERT OR UPDATE ON VUELO
+FOR EACH ROW
+BEGIN
+    :NEW.duracion := (:NEW.fecha_llegada - :NEW.fecha_salida) * 24*60;
+END;
+/
 
 -- Trigger para actualizar el estado de vuelo
 
