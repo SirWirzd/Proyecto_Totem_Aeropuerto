@@ -118,7 +118,6 @@ CREATE TABLE COMPRA(
     id_pasajero_comp NUMBER NOT NULL,
     id_vuelo_comp NUMBER NOT NULL,
     fecha_compra DATE NOT NULL,
-    monto_total_compra NUMBER NOT NULL,
     motivo_viaje VARCHAR2(100) NOT NULL,
     CONSTRAINT PK_COMPRA PRIMARY KEY (id_compra),
     CONSTRAINT FK_COMPRA_PASAJERO FOREIGN KEY (id_pasajero_comp) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
@@ -470,7 +469,7 @@ BEGIN
         SELECT id_asiento
         INTO v_id_asiento
         FROM RESERVA
-        WHERE id_vuelo_res = v_id_vuelo;
+        WHERE id_vuelo_res = v_id_vuelo 
         AND id_pasajero_res = (SELECT id_pasajero_comp FROM COMPRA WHERE id_compra = p_id_compra);
 
         UPDATE ASIENTO
@@ -478,7 +477,7 @@ BEGIN
         WHERE id_asiento = v_id_asiento;
 
         DELETE FROM RESERVA
-        WHERE id_vuelo_res = v_id_vuelo;
+        WHERE id_vuelo_res = v_id_vuelo
         AND id_pasajero_res = (SELECT id_pasajero_comp FROM COMPRA WHERE id_compra = p_id_compra);
     
 EXCEPTION
