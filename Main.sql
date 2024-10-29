@@ -29,8 +29,10 @@ CREATE TABLE PAIS(
     id_pais NUMBER NOT NULL,
     nombre VARCHAR2(100) NOT NULL,
     visa_requerida VARCHAR2(20),
+    tipo_visa VARCHAR2(99),
     CONSTRAINT PK_PAIS PRIMARY KEY (id_pais),
-    CONSTRAINT chck_visa_pais CHECK (visa_requerida IN ('Sí', 'No'))
+    CONSTRAINT chck_visa_pais CHECK (visa_requerida IN ('Sí', 'No')),
+    CONSTRAINT chck_tipo_visa CHECK (tipo_visa IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo'))
 );
 
 CREATE TABLE CIUDAD(
@@ -45,10 +47,8 @@ CREATE TABLE AEROPUERTO(
     id_aeropuerto NUMBER NOT NULL,
     nombre VARCHAR2(100) NOT NULL,
     id_ciudad NUMBER NOT NULL,
-    id_pais NUMBER NOT NULL,
     CONSTRAINT PK_AEROPUERTO PRIMARY KEY (id_aeropuerto),
     CONSTRAINT FK_AEROPUERTO_CIUDAD FOREIGN KEY (id_ciudad) REFERENCES CIUDAD(id_ciudad) ON DELETE CASCADE,
-    CONSTRAINT FK_AEROPUERTO_PAIS FOREIGN KEY (id_pais) REFERENCES PAIS(id_pais) ON DELETE CASCADE
 );
 
 CREATE TABLE AEROLINEA(
@@ -62,10 +62,13 @@ CREATE TABLE PASAJERO(
     nombre VARCHAR2(100) NOT NULL,
     apellido VARCHAR2(100) NOT NULL,
     fecha_nacimiento DATE NOT NULL,
+    correo_electronico VARCHAR2(100) NOT NULL,
+    telefono_pasajero VARCHAR2(99) NOT NULL,
     documento_identidad VARCHAR(20) NOT NULL,
     edad NUMBER,
     CONSTRAINT PK_PASAJERO PRIMARY KEY (id_pasajero),
-    CONSTRAINT chck_documento_identidad CHECK (LENGTH(documento_identidad) <= 9)
+    CONSTRAINT chck_documento_identidad CHECK (LENGTH(documento_identidad) <= 9),
+    CONSTRAINT chck_telefono CHECK (telefono_pasajero LIKE '+%_____%')
 );
 
 CREATE TABLE VUELO(
@@ -93,6 +96,20 @@ CREATE TABLE ASIENTO(
     CONSTRAINT PK_ASIENTO PRIMARY KEY (id_asiento),
     CONSTRAINT FK_ASIENTO_VUELO FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE
 );
+CREATE TABLE CHECK_IN(
+    id_check_in NUMBER NOT NULL,
+    id_pasajero_check NUMBER NOT NULL,
+    id_vuelo_check NUMBER NOT NULL,
+    fecha_check_in DATE NOT NULL,
+    estado VARCHAR2(20),
+    tipo_check_in VARCHAR2(20),
+    CONSTRAINT PK_CHECK_IN PRIMARY KEY (id_check_in),
+    CONSTRAINT FK_CHECK_IN_PASAJERO FOREIGN KEY (id_pasajero_check) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
+    CONSTRAINT FK_CHECK_IN_VUELO FOREIGN KEY (id_vuelo_check) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE
+    CONSTRAINT chck_estado CHECK (estado IN ('Completado', 'Pendiente', 'Cancelado')),
+    CONSTRAINT chck_tipo_check_in CHECK (tipo_check_in IN ('Presencial', 'Online'))
+);
+
 
 CREATE TABLE COMPRA(
     id_compra NUMBER NOT NULL,
