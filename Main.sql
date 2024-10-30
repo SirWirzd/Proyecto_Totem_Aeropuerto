@@ -32,6 +32,7 @@ CREATE TABLE PAIS(
     nombre VARCHAR2(100) NOT NULL,
     visa_requerida VARCHAR2(20),
     tipo_visa VARCHAR2(99),
+    pasaporte_requerido VARCHAR2(20) CHECK (pasaporte_requerido IN ('Sí', 'No')),
     CONSTRAINT PK_PAIS PRIMARY KEY (id_pais),
     CONSTRAINT chck_visa_pais CHECK (visa_requerida IN ('Sí', 'No')),
     CONSTRAINT chck_tipo_visa CHECK (visa_requerida = 'No' OR tipo_visa IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo'))
@@ -166,95 +167,56 @@ CREATE TABLE CHECK_IN(
 
 ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'DD-MM-YYYY HH24:MI:SS';
 
--- Procedimiento para realizar el check-in de un pasajero
-CREATE OR REPLACE PROCEDURE proc_realizar_check_in (
-    p_identificador_compra NUMBER,
-    p_documento_identidad VARCHAR2,
-    p_id_vuelo NUMBER,
-    p_id_asiento NUMBER,
-    p_peso_equipaje NUMBER
-) IS
-    v_id_pasajero NUMBER;
-    v_documento_valido BOOLEAN := FALSE;
-BEGIN
-    -- Verificación del documento de identidad o número de compra
-    IF p_identificador_compra IS NOT NULL THEN
-        SELECT id_pasajero_comp
-        INTO v_id_pasajero
-        FROM COMPRA
-        WHERE id_compra = p_identificador_compra;
-    ELSIF p_documento_identidad IS NOT NULL THEN
-        SELECT id_pasajero
-        INTO v_id_pasajero
-        FROM PASAJERO
-        WHERE documento_identidad = p_documento_identidad;
-    ELSE
-        RAISE_APPLICATION_ERROR(-20003, 'Se debe proporcionar un número de compra o un documento de identidad.');
-    END IF;
-
-    -- Validación de formato del documento de identidad (RUN o pasaporte)
-    IF p_documento_identidad IS NOT NULL THEN
-        IF REGEXP_LIKE (p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$') OR REGEXP_LIKE (p_documento_identidad, '^[A-Za-z]{1}[0-9]{5,9}$') THEN 
-            v_documento_valido := TRUE;
-        ELSE
-            RAISE_APPLICATION_ERROR(-20001, 'Documento de identidad inválido.');
-        END IF;
-    END IF;
-
-    -- Verificación de disponibilidad del asiento
-    BEGIN
-        SELECT 1
-        INTO v_id_pasajero
-        FROM ASIENTO
-        WHERE id_asiento = p_id_asiento 
-        AND id_vuelo = p_id_vuelo 
-        AND estado = 'Disponible';
-    EXCEPTION
-        WHEN NO_DATA_FOUND THEN
-            RAISE_APPLICATION_ERROR(-20002, 'El asiento no está disponible.');
-    END;
-
-    -- Verificación del peso del equipaje
-    IF p_peso_equipaje > 23 THEN
-        RAISE_APPLICATION_ERROR(-20004, 'El peso del equipaje excede el límite permitido. Por favor, pague una multa o reduzca el peso.');
-    END IF;
-
-    -- Inserción en la tabla de CHECK_IN
-    INSERT INTO CHECK_IN (
-        id_check_in, id_pasajero_check, id_vuelo_check, fecha_check_in, estado, tipo_check_in
-    ) VALUES (
-        SEQ_CHECK_IN.NEXTVAL, v_id_pasajero, p_id_vuelo, SYSDATE, 'Completado', 
-        CASE 
-            WHEN p_documento_identidad IS NOT NULL THEN 'Presencial' 
-            ELSE 'Online' 
-        END
-    );
-
-    -- Actualización del estado del asiento a 'No disponible'
-    UPDATE ASIENTO
-    SET estado = 'No disponible'
-    WHERE id_asiento = p_id_asiento AND id_vuelo = p_id_vuelo;
-
-    COMMIT;
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20005, 'Pasajero o compra no encontrada.');
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
-END;
-/
-
 -- Trigger para verificar visa
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_VISA
-BEFORE INSERT ON PAIS
+BEFORE INSERT ON RESERVA
 FOR EACH ROW
+DECLARE
+    v_visa_requerida VARCHAR2(20);
+    v_tipo_visa VARCHAR2(99);
 BEGIN
-    IF :NEW.visa_requerida = 'Sí' THEN
-        RAISE_APPLICATION_ERROR(-20002, 'Se requiere visa para ingresar a ' || :NEW.nombre);
+    SELECT p.visa_requerida, p.tipo_visa
+    INTO v_visa_requerida, v_tipo_visa
+    FROM PAIS p
+    JOIN CIUDAD c ON c.id_pais = p.id_pais
+    JOIN AEROPUERTO a ON a.id_ciudad = c.id_ciudad
+    JOIN VUELO v ON v.id_aeropuerto_destino = a.id_aeropuerto
+    WHERE v.id_vuelo = :NEW.id_vuelo_res;
+
+    -- Verifica si la visa es requerida sin tipo de visa especificado
+    IF v_visa_requerida = 'Sí' AND v_tipo_visa IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20002, 'El país de destino requiere especificar el tipo de visa para el pasajero.');
     END IF;
 END;
 /
+
+-- Trigger para verificar pasaporte
+CREATE OR REPLACE TRIGGER TRG_VERIFICAR_PASAPORTE
+BEFORE INSERT ON RESERVA
+FOR EACH ROW
+DECLARE
+    v_pasaporte_requerido VARCHAR2(20);
+    v_pasaporte_pasajero VARCHAR2(20);
+BEGIN
+    -- Selección de si el país de destino del vuelo requiere pasaporte
+    SELECT p.pasaporte_requerido
+    INTO v_pasaporte_requerido
+    FROM PAIS p
+    JOIN CIUDAD c ON c.id_pais = p.id_pais
+    JOIN AEROPUERTO a ON a.id_ciudad = c.id_ciudad
+    JOIN VUELO v ON v.id_aeropuerto_destino = a.id_aeropuerto
+    WHERE v.id_vuelo = :NEW.id_vuelo_res;
+
+    -- Verificación de que el pasajero tiene pasaporte si es necesario
+    SELECT documento_identidad
+    INTO v_pasaporte_pasajero
+    FROM PASAJERO
+    WHERE id_pasajero = :NEW.id_pasajero_res;
+
+    IF v_pasaporte_requerido = 'Sí' AND v_pasaporte_pasajero = 'No' THEN
+        RAISE_APPLICATION_ERROR(-20003, 'El país de destino requiere que el pasajero tenga pasaporte.');
+    END IF;
+END;
 
 -- Trigger para verificar la duración del vuelo
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_DURACION
@@ -386,61 +348,81 @@ BEGIN
     WHERE id_vuelo = :NEW.id_vuelo_res;
 END;
 
--- Procedimiento para confirmar una compra y generar el ticket
-
-CREATE OR REPLACE PROCEDURE confirmar_compra (
-    p_id_pasajero   NUMBER,       
-    p_id_vuelo      VARCHAR2,     
-    p_asiento       VARCHAR2,     
-    p_maletas       NUMBER,       
-    p_servicios     VARCHAR2,     
-    p_total_pago    NUMBER        
-) AS
-    v_asiento_disponible NUMBER;  
+-- Procedimiento para realizar el check-in de un pasajero
+CREATE OR REPLACE PROCEDURE proc_realizar_check_in (
+    p_identificador_compra NUMBER,
+    p_documento_identidad VARCHAR2,
+    p_id_vuelo NUMBER,
+    p_id_asiento NUMBER,
+    p_peso_equipaje NUMBER
+) IS
+    v_id_pasajero NUMBER;
+    v_documento_valido BOOLEAN := FALSE;
 BEGIN
-    -- Verificar si el vuelo existe
-    IF NOT EXISTS (SELECT 1 FROM VUELO WHERE id_vuelo = p_id_vuelo) THEN
-        RAISE_APPLICATION_ERROR(-20002, 'Vuelo no encontrado.');
+    -- Verificación del documento de identidad o número de compra
+    IF p_identificador_compra IS NOT NULL THEN
+        SELECT id_pasajero_comp
+        INTO v_id_pasajero
+        FROM COMPRA
+        WHERE id_compra = p_identificador_compra;
+    ELSIF p_documento_identidad IS NOT NULL THEN
+        SELECT id_pasajero
+        INTO v_id_pasajero
+        FROM PASAJERO
+        WHERE documento_identidad = p_documento_identidad;
+    ELSE
+        RAISE_APPLICATION_ERROR(-20003, 'Se debe proporcionar un número de compra o un documento de identidad.');
     END IF;
 
-    -- Verificar disponibilidad del asiento
-    SELECT COUNT(*)
-    INTO v_asiento_disponible
-    FROM RESERVA
-    WHERE id_vuelo = p_id_vuelo AND asiento = p_asiento AND estado = 'Reservado';
-
-    IF v_asiento_disponible > 0 THEN
-        RAISE_APPLICATION_ERROR(-20003, 'Asiento ya reservado.');
+    -- Validación de formato del documento de identidad (RUN o pasaporte)
+    IF p_documento_identidad IS NOT NULL THEN
+        IF REGEXP_LIKE (p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$') OR REGEXP_LIKE (p_documento_identidad, '^[A-Za-z]{1}[0-9]{5,9}$') THEN 
+            v_documento_valido := TRUE;
+        ELSE
+            RAISE_APPLICATION_ERROR(-20001, 'Documento de identidad inválido.');
+        END IF;
     END IF;
 
-    -- Registrar la compra en la tabla COMPRA
+    -- Verificación de disponibilidad del asiento
+    BEGIN
+        SELECT 1
+        INTO v_id_pasajero
+        FROM ASIENTO
+        WHERE id_asiento = p_id_asiento 
+        AND id_vuelo = p_id_vuelo 
+        AND estado = 'Disponible';
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20002, 'El asiento no está disponible.');
+    END;
 
-    INSERT INTO COMPRA (id_compra, id_pasajero, id_vuelo, fecha_compra, total_pago)
-    VALUES (seq_compra.NEXTVAL, p_id_pasajero, p_id_vuelo, SYSDATE, p_total_pago);
-
-    -- Registrar la reserva del asiento
-
-    INSERT INTO RESERVA (id_reserva, id_vuelo, id_pasajero, asiento, estado)
-    VALUES (seq_reserva.NEXTVAL, p_id_vuelo, p_id_pasajero, p_asiento, 'Reservado');
-
-    -- Registrar servicios adicionales si existen
-    
-    IF p_servicios IS NOT NULL THEN
-        INSERT INTO SERVICIOS_PASAJERO (id_servicio_pasajero, id_pasajero, descripcion, maletas)
-        VALUES (seq_servicios_pasajero.NEXTVAL, p_id_pasajero, p_servicios, p_maletas);
+    -- Verificación del peso del equipaje
+    IF p_peso_equipaje > 23 THEN
+        RAISE_APPLICATION_ERROR(-20004, 'El peso del equipaje excede el límite permitido. Por favor, pague una multa o reduzca el peso.');
     END IF;
 
-    -- Actualizar estado del asiento a 'Reservado'
+    -- Inserción en la tabla de CHECK_IN
+    INSERT INTO CHECK_IN (
+        id_check_in, id_pasajero_check, id_vuelo_check, fecha_check_in, estado, tipo_check_in
+    ) VALUES (
+        SEQ_CHECK_IN.NEXTVAL, v_id_pasajero, p_id_vuelo, SYSDATE, 'Completado', 
+        CASE 
+            WHEN p_documento_identidad IS NOT NULL THEN 'Presencial' 
+            ELSE 'Online' 
+        END
+    );
+
+    -- Actualización del estado del asiento a 'No disponible'
     UPDATE ASIENTO
-    SET estado = 'Reservado'
-    WHERE numero_asiento = p_asiento AND id_vuelo = p_id_vuelo;
+    SET estado = 'No disponible'
+    WHERE id_asiento = p_id_asiento AND id_vuelo = p_id_vuelo;
 
-
-    -- Mensaje de confirmación
     COMMIT;
-    DBMS_OUTPUT.PUT_LINE('Compra confirmada para el pasajero ' || p_id_pasajero || ' en el vuelo ' || p_id_vuelo || ' con el asiento ' || p_asiento);
-    DBMS_OUTPUT.PUT_LINE('Compra confirmada para el vuelo ' || p_id_vuelo || '. Asiento ' || p_asiento || ' reservado.');
-    DBMS_OUTPUT.PUT_LINE('Total pagado: ' || p_total_pago || ' CLP.');
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20005, 'Pasajero o compra no encontrada.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
 END;
 /
-
