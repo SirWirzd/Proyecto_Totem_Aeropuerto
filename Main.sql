@@ -171,62 +171,39 @@ ALTER SESSION SET NLS_DATE_FORMAT = 'DD-MM-YYYY';
 
 
 
--- Procedimiento para validar el documento de identidad
-CREATE OR REPLACE PROCEDURE VALIDACION (
-    p_documento_identidad IN VARCHAR2
+CREATE OR REPLACE PROCEDURE proc_realizar_check_in (
+    p_identificador_compra NUMBER,
+    p_documento_identidad VARCHAR2,
+    p_id_vuelo NUMBER,
+    p_id_asiento NUMBER,
+    p_peso_equipaje NUMBER,
 ) IS
-    documento_identidad_invalido EXCEPTION;
+    v_id_pasajero NUMBER;
+    v_asiento_disponible BOOLEAN := FALSE;
+    v_documento_valido BOOLEAN := FALSE;
 BEGIN
-    IF REGEXP_LIKE(p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$') THEN
-        NULL;
-    ELSIF REGEXP_LIKE(p_documento_identidad, '^[0-9]{9}$') AND LENGHT(documento_identidad)<= 9 THEN
-        NULL;
+    IF p_identificador_compra IS NOT NULL THEN
+        SELECT id_pasajero_comp
+        INTO v_id_pasajero
+        FROM COMPRA
+        WHERE id_compra = p_identificador_compra;
+    ELSIF p_documento_identidad IS NOT NULL THEN
+        SELECT id_pasajero
+        INTO v_id_pasajero
+        FROM PASAJERO
+        WHERE documento_identidad = p_documento_identidad;
     ELSE
-        RAISE documento_identidad_invalido;
+        RAISE_APPLICATION_ERROR(-20003, 'Se debe proporcionar un número de compra o un documento de identidad.');
     END IF;
-EXCEPTION
-    WHEN documento_identidad_invalido THEN
-        RAISE_APPLICATION_ERROR(-20001, 'Documento de identidad inválido.');
-END;
-/
--- Trigger para validar el documento de identidad
-CREATE OR REPLACE TRIGGER TRG_VALIDAR_PASAJERO 
-BEFORE INSERT OR UPDATE ON PASAJERO 
-FOR EACH ROW 
-BEGIN
-    -- Verificar que la fecha de nacimiento no sea futura
-    IF :NEW.fecha_nacimiento >= SYSDATE THEN
-        RAISE_APPLICATION_ERROR(-20001, 'La fecha de nacimiento no puede ser futura.'); 
-    END IF; 
-    -- Verificar que el documento de identidad no exceda los 9 caracteres 
-    IF LENGTH(:NEW.documento_identidad) > 9 THEN 
-        RAISE_APPLICATION_ERROR(-20002, 'El documento de identidad no puede exceder los 9 caracteres.'); 
-    END IF; 
-    -- Verificar que el pasajero sea mayor de edad (18 años o más) 
-    IF (SYSDATE - :NEW.fecha_nacimiento) / 365 < 18 THEN
-        RAISE_APPLICATION_ERROR(-20003, 'El pasajero debe ser mayor de edad.'); 
+
+    IF p_documento_identidad IS NOT NULL THEN
+        IF REGEXP_LIKE (p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$$') OR
+            (REGEXP_LIKE (p_documento_identidad, '^[0-9]{9}$')) AND LENGTH(p_documento_identidad <=9)THEN
+            v_documento_valido := TRUE;
+        ELSE
+            RAISE_APPLICATION_ERROR(-20001, 'Documento de identidad inválido.');
+        END IF;
     END IF;
-END;
-
--- Trigger para validad si un asiento está disponible
-
-CREATE OR REPLACE TRIGGER TRG_VALIDA_ASIENTO_DISPONIBLE
-BEFORE INSERT ON RESERVA
-FOR EACH ROW
-DECLARE
-    v_asiento_disponible VARCHAR2(20);
-BEGIN
-    SELECT estado
-    INTO v_asiento_disponible
-    FROM ASIENTO
-    WHERE id_asiento = :NEW.id_asiento
-    AND id_vuelo = :NEW.id_vuelo;
-
-
-    IF v_asiento_disponible = 'No disponible' THEN
-        RAISE_APPLICATION_ERROR(-20001, 'El asiento ya está ocupado o no disponible.');
-    END IF;
-END;
 
 -- Trigger para verificar visa
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_VISA
@@ -316,19 +293,6 @@ BEGIN
     END IF;
 END;
 
--- Trigger para actualizar el estado de equipaje
-
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_EQUIPAJE
-AFTER INSERT OR UPDATE ON EQUIPAJE
-FOR EACH ROW
-BEGIN
-    IF (:NEW.peso > 20) THEN
-        UPDATE EQUIPAJE
-        SET estado = 'Sobrepeso' 
-        WHERE id_equipaje = :NEW.id_equipaje;
-    END IF;
-END;
-
 -- Trigger para actualizar el estado de servicios
 
 CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_SERVICIOS
@@ -374,13 +338,12 @@ BEGIN
 END;
 
 -- Trigger verificar peso del equipaje
-
 CREATE OR REPLACE TRIGGER VERIFICAR_PESO_EQUIPAJE
 BEFORE INSERT ON EQUIPAJE
 FOR EACH ROW
 BEGIN
-    IF (:NEW.peso > 20) THEN
-        RAISE_APPLICATION_ERROR(-20002, 'El peso del equipaje no puede superar los 20 kg.');
+    IF (:NEW.peso > 23) THEN
+        RAISE_APPLICATION_ERROR(-20002, 'El peso del equipaje no puede superar los 23 kg.');
     END IF;
 END;
 
@@ -488,3 +451,4 @@ EXCEPTION
         RAISE_APPLICATION_ERROR(-20002, 'Ha ocurrido un error al intentar cancelar la compra.');
 END;
 /
+
