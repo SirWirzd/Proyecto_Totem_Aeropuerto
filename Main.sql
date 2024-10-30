@@ -210,18 +210,18 @@ CREATE TABLE ASISTENCIA(
 ALTER SESSION SET NLS_DATE_FORMAT = 'DD-MM-YYYY';
 
 
-
+-- Procedimiento para realziar el check-in de un pasajero
 CREATE OR REPLACE PROCEDURE proc_realizar_check_in (
     p_identificador_compra NUMBER,
     p_documento_identidad VARCHAR2,
     p_id_vuelo NUMBER,
     p_id_asiento NUMBER,
-    p_peso_equipaje NUMBER,
+    p_peso_equipaje NUMBER
 ) IS
     v_id_pasajero NUMBER;
-    v_asiento_disponible BOOLEAN := FALSE;
     v_documento_valido BOOLEAN := FALSE;
 BEGIN
+    -- Verificación del documento de identidad o número de compra
     IF p_identificador_compra IS NOT NULL THEN
         SELECT id_pasajero_comp
         INTO v_id_pasajero
@@ -236,23 +236,59 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20003, 'Se debe proporcionar un número de compra o un documento de identidad.');
     END IF;
 
+    -- Validación de formato del documento de identidad (RUN o pasaporte)
     IF p_documento_identidad IS NOT NULL THEN
-        IF REGEXP_LIKE (p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$$') OR
-            (REGEXP_LIKE (p_documento_identidad, '^[0-9]{9}$')) AND LENGTH(p_documento_identidad <=9)THEN
+        IF REGEXP_LIKE (p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$') OR  -- RUN Chileno
+           REGEXP_LIKE (p_documento_identidad, '^[A-Za-z]{1}[0-9]{5,9}$') THEN -- Pasaporte
             v_documento_valido := TRUE;
         ELSE
             RAISE_APPLICATION_ERROR(-20001, 'Documento de identidad inválido.');
         END IF;
     END IF;
 
-    SELECT CASE WHEN estado = 'Disponible' THEN TRUE ELSE FALSE END
-    INTO v_asiento_disponible
-    FROM ASIENTO
+    -- Verificación de disponibilidad del asiento
+    BEGIN
+        SELECT 1
+        INTO v_id_pasajero
+        FROM ASIENTO
+        WHERE id_asiento = p_id_asiento 
+        AND id_vuelo = p_id_vuelo 
+        AND estado = 'Disponible';
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20002, 'El asiento no está disponible.');
+    END;
+
+    -- Verificación del peso del equipaje
+    IF p_peso_equipaje > 23 THEN
+        RAISE_APPLICATION_ERROR(-20004, 'El peso del equipaje excede el límite permitido. Por favor, pague una multa o reduzca el peso.');
+    END IF;
+
+    -- Inserción en la tabla de CHECK_IN
+    INSERT INTO CHECK_IN (
+        id_check_in, id_pasajero_check, id_vuelo_check, fecha_check_in, estado, tipo_check_in
+    ) VALUES (
+        SEQ_CHECK_IN.NEXTVAL, v_id_pasajero, p_id_vuelo, SYSDATE, 'Completado', 
+        CASE 
+            WHEN p_documento_identidad IS NOT NULL THEN 'Presencial' 
+            ELSE 'Online' 
+        END
+    );
+
+    -- Actualización del estado del asiento a 'No disponible'
+    UPDATE ASIENTO
+    SET estado = 'No disponible'
     WHERE id_asiento = p_id_asiento AND id_vuelo = p_id_vuelo;
 
-    IF NOT v_asiento_disponible THEN
-        RAISE_APPLICATION_ERROR(-20002, 'El asiento no esta disponible.');
-    END IF;
+    COMMIT;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20005, 'Pasajero o compra no encontrada.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
 
 -- Trigger para verificar visa
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_VISA
