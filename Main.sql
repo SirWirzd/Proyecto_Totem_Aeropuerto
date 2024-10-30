@@ -90,7 +90,6 @@ CREATE TABLE PASAJERO(
     documento_identidad VARCHAR(20) NOT NULL,
     edad NUMBER,
     CONSTRAINT PK_PASAJERO PRIMARY KEY (id_pasajero),
-    CONSTRAINT chck_documento_identidad CHECK (LENGTH(documento_identidad) <= 9),
     CONSTRAINT chck_telefono CHECK (telefono_pasajero LIKE '+%_____%')
 );
 
@@ -340,18 +339,6 @@ BEGIN
     END IF;
 END;
 
--- Trigger para actualizar el estado de asiento
-
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_ASIENTO
-AFTER INSERT OR UPDATE ON ASIENTO
-FOR EACH ROW
-BEGIN
-    IF (:NEW.estado = 'Reservado') THEN
-        UPDATE ASIENTO
-        SET estado = 'No disponible' 
-        WHERE id_asiento = :NEW.id_asiento;
-    END IF;
-END;
 
 -- Trigger para actualizar el estado de asistencia
 
