@@ -13,26 +13,22 @@ CREATE USER admin IDENTIFIED BY admin;
 GRANT ALL PRIVILEGES TO admin;
 
 -- ELiminación de tablas si existen previamente
-DROP TABLE PAIS CASCADE CONSTRAINTS;
-DROP TABLE CIUDAD CASCADE CONSTRAINTS;
-DROP TABLE AEROPUERTO CASCADE CONSTRAINTS;
-DROP TABLE VUELO CASCADE CONSTRAINTS;
-DROP TABLE PASAJERO CASCADE CONSTRAINTS;
-DROP TABLE COMPRA CASCADE CONSTRAINTS;
+DROP TABLE ASIGNACION_PUERTA CASCADE CONSTRAINTS;
+DROP TABLE EQUIPAJE CASCADE CONSTRAINTS;
 DROP TABLE CHECK_IN CASCADE CONSTRAINTS;
-DROP TABLE RESERVA CASCADE CONSTRAINTS;
-DROP TABLE EQUIPAJE CASCADE CONSTRAINTS;    
-DROP TABLE AEROLINEA CASCADE CONSTRAINTS;
 DROP TABLE SERVICIOS_PASAJERO CASCADE CONSTRAINTS;
 DROP TABLE ASISTENCIA CASCADE CONSTRAINTS;
 DROP TABLE ASIENTO CASCADE CONSTRAINTS;
-DROP TABLE TERMINAL_AEROPUERTO CASCADE CONSTRAINTS;
-DROP TABLE PUERTA CASCADE CONSTRAINTS;
+DROP TABLE RESERVA CASCADE CONSTRAINTS;
+DROP TABLE VUELO CASCADE CONSTRAINTS;
 DROP TABLE AVION CASCADE CONSTRAINTS;
-DROP TABLE ASIGNACION_PUERTA CASCADE CONSTRAINTS;
-
-
-
+DROP TABLE AEROLINEA CASCADE CONSTRAINTS;
+DROP TABLE PUERTA CASCADE CONSTRAINTS;
+DROP TABLE TERMINAL_AEROPUERTO CASCADE CONSTRAINTS;
+DROP TABLE AEROPUERTO CASCADE CONSTRAINTS;
+DROP TABLE CIUDAD CASCADE CONSTRAINTS;
+DROP TABLE PASAJERO CASCADE CONSTRAINTS;
+DROP TABLE PAIS CASCADE CONSTRAINTS;
 
 CREATE TABLE PAIS(
     id_pais NUMBER NOT NULL,
@@ -41,7 +37,7 @@ CREATE TABLE PAIS(
     tipo_visa VARCHAR2(99),
     CONSTRAINT PK_PAIS PRIMARY KEY (id_pais),
     CONSTRAINT chck_visa_pais CHECK (visa_requerida IN ('Sí', 'No')),
-    CONSTRAINT chck_tipo_visa CHECK (tipo_visa IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo'))
+    CONSTRAINT chck_tipo_visa CHECK (visa_requerida = 'No' OR tipo_visa IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo'))
 );
 
 CREATE TABLE CIUDAD(
@@ -80,45 +76,6 @@ CREATE TABLE AEROLINEA(
     CONSTRAINT PK_AEROLINEA PRIMARY KEY (id_aerolinea)
 );
 
-CREATE TABLE PASAJERO(
-    id_pasajero NUMBER NOT NULL,
-    nombre VARCHAR2(100) NOT NULL,
-    apellido VARCHAR2(100) NOT NULL,
-    fecha_nacimiento DATE NOT NULL,
-    correo_electronico VARCHAR2(100) NOT NULL,
-    telefono_pasajero VARCHAR2(99) NOT NULL,
-    documento_identidad VARCHAR(20) NOT NULL,
-    edad NUMBER,
-    CONSTRAINT PK_PASAJERO PRIMARY KEY (id_pasajero),
-    CONSTRAINT chck_telefono CHECK (telefono_pasajero LIKE '+%_____%')
-);
-
-CREATE TABLE VUELO(
-    id_vuelo NUMBER NOT NULL,
-    id_aerolinea_vuel NUMBER NOT NULL,
-    id_aeropuerto_origen NUMBER NOT NULL,
-    id_aeropuerto_destino NUMBER NOT NULL,
-    fecha_de_vuelo DATE NOT NULL,
-    fecha_salida DATE NOT NULL,
-    fecha_llegada DATE NOT NULL,
-    duracion NUMBER NOT NULL,
-    distancia NUMBER NOT NULL,
-    estado VARCHAR2(20) CHECK (estado IN ('Programado', 'En vuelo', 'Aterrizado', 'Cancelado')),
-    CONSTRAINT PK_VUELO PRIMARY KEY (id_vuelo),
-    CONSTRAINT FK_VUELO_AEROLINEA FOREIGN KEY (id_aerolinea_vuel) REFERENCES AEROLINEA(id_aerolinea) ON DELETE CASCADE,
-    CONSTRAINT FK_VUELO_AEROPUERTO_ORIGEN FOREIGN KEY (id_aeropuerto_origen) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE,
-    CONSTRAINT FK_VUELO_AEROPUERTO_DESTINO FOREIGN KEY (id_aeropuerto_destino) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE 
-);
-
-CREATE TABLE ASIENTO(
-    id_asiento NUMBER NOT NULL,
-    id_vuelo NUMBER NOT NULL,
-    numero_asiento VARCHAR2(10) NOT NULL,
-    estado VARCHAR2(20) CHECK (estado IN ('Disponible', 'No disponible')),
-    CONSTRAINT PK_ASIENTO PRIMARY KEY (id_asiento),
-    CONSTRAINT FK_ASIENTO_VUELO FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE
-);
-
 CREATE TABLE AVION (
     id_avion NUMBER NOT NULL,
     modelo VARCHAR2(50) NOT NULL,
@@ -128,39 +85,33 @@ CREATE TABLE AVION (
     CONSTRAINT FK_AVION_AEROLINEA FOREIGN KEY (id_aerolinea) REFERENCES AEROLINEA(id_aerolinea) ON DELETE CASCADE
 );
 
-CREATE TABLE CHECK_IN(
-    id_check_in NUMBER NOT NULL,
-    id_pasajero_check NUMBER NOT NULL,
-    id_vuelo_check NUMBER NOT NULL,
-    fecha_check_in DATE NOT NULL,
-    estado VARCHAR2(20),
-    tipo_check_in VARCHAR2(20),
-    CONSTRAINT PK_CHECK_IN PRIMARY KEY (id_check_in),
-    CONSTRAINT FK_CHECK_IN_PASAJERO FOREIGN KEY (id_pasajero_check) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
-    CONSTRAINT FK_CHECK_IN_VUELO FOREIGN KEY (id_vuelo_check) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
-    CONSTRAINT chck_estado CHECK (estado IN ('Completado', 'Pendiente', 'Cancelado')),
-    CONSTRAINT chck_tipo_check_in CHECK (tipo_check_in IN ('Presencial', 'Online'))
+CREATE TABLE PASAJERO(
+    id_pasajero NUMBER NOT NULL,
+    nombre VARCHAR2(100) NOT NULL,
+    apellido VARCHAR2(100) NOT NULL,
+    fecha_nacimiento DATE NOT NULL,
+    correo_electronico VARCHAR2(100) NOT NULL,
+    telefono_pasajero VARCHAR2(99) NOT NULL,
+    documento_identidad VARCHAR(20) NOT NULL,
+    edad NUMBER CHECK (edad >= 0),
+    CONSTRAINT PK_PASAJERO PRIMARY KEY (id_pasajero),
+    CONSTRAINT chck_telefono CHECK (telefono_pasajero LIKE '+%_____%')
 );
 
-CREATE TABLE ASIGNACION_PUERTA(
-    id_asignacion_puerta NUMBER NOT NULL,
-    id_vuelo_asig NUMBER NOT NULL,
-    id_puerta_asignada NUMBER NOT NULL,
-    hora_asignacion DATE NOT NULL,
-    CONSTRAINT PK_ASIGNACION_PUERTA PRIMARY KEY (id_asignacion_puerta),
-    CONSTRAINT FK_ASIGNACION_PUERTA_VUELO FOREIGN KEY (id_vuelo_asig) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
-    CONSTRAINT FK_ASIGNACION_PUERTA_PUERTA FOREIGN KEY (id_puerta_asignada) REFERENCES PUERTA(id_puerta) ON DELETE CASCADE
-);
-
-CREATE TABLE COMPRA(
-    id_compra NUMBER NOT NULL,
-    id_pasajero_comp NUMBER NOT NULL,
-    id_vuelo_comp NUMBER NOT NULL,
-    fecha_compra DATE NOT NULL,
-    motivo_viaje VARCHAR2(100) NOT NULL,
-    CONSTRAINT PK_COMPRA PRIMARY KEY (id_compra),
-    CONSTRAINT FK_COMPRA_PASAJERO FOREIGN KEY (id_pasajero_comp) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
-    CONSTRAINT FK_COMPRA_VUELO FOREIGN KEY (id_vuelo_comp) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE
+CREATE TABLE VUELO(
+    id_vuelo NUMBER NOT NULL,
+    id_aerolinea NUMBER NOT NULL,
+    id_aeropuerto_origen NUMBER NOT NULL,
+    id_aeropuerto_destino NUMBER NOT NULL,
+    fecha_salida DATE NOT NULL,
+    fecha_llegada DATE NOT NULL,
+    duracion NUMBER NOT NULL,
+    distancia NUMBER NOT NULL,
+    estado VARCHAR2(20) CHECK (estado IN ('Programado', 'En vuelo', 'Aterrizado', 'Cancelado')),
+    CONSTRAINT PK_VUELO PRIMARY KEY (id_vuelo),
+    CONSTRAINT FK_VUELO_AEROLINEA FOREIGN KEY (id_aerolinea) REFERENCES AEROLINEA(id_aerolinea) ON DELETE CASCADE,
+    CONSTRAINT FK_VUELO_AEROPUERTO_ORIGEN FOREIGN KEY (id_aeropuerto_origen) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE,
+    CONSTRAINT FK_VUELO_AEROPUERTO_DESTINO FOREIGN KEY (id_aeropuerto_destino) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE 
 );
 
 CREATE TABLE RESERVA(
@@ -169,39 +120,70 @@ CREATE TABLE RESERVA(
     id_vuelo_res NUMBER NOT NULL,
     id_asiento NUMBER NOT NULL,
     fecha_reserva DATE NOT NULL,
-    CONSTRAINT PK_RESERVA PRIMARY KEY (id_reserva),
+    motivo_viaje VARCHAR2(100) NOT NULL,
+    tipo_boleto VARCHAR2(50) NOT NULL CHECK (tipo_boleto IN ('Económico', 'Ejecutivo', 'Primera Clase')),
+    estado VARCHAR2(20) CHECK (estado IN ('Confirmada', 'Cancelado', 'Pendiente')),
+    CONSTRAINT PK_RESERVA PRIMARY KEY (id_reserva, id_pasajero_res , id_vuelo_res),
     CONSTRAINT FK_RESERVA_PASAJERO FOREIGN KEY (id_pasajero_res) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
     CONSTRAINT FK_RESERVA_VUELO FOREIGN KEY (id_vuelo_res) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_ASIENTO FOREIGN KEY (id_asiento) REFERENCES ASIENTO(id_asiento) ON DELETE CASCADE
+    CONSTRAINT FK_RESERVA_ASIENTO FOREIGN KEY (id_asiento) REFERENCES ASIENTO(id_asiento) ON DELETE CASCADE,
+    CONSTRAINT chck_motivo_viaje CHECK (motivo_viaje IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo'))
+);
+
+CREATE TABLE ASIENTO(
+    id_asiento NUMBER NOT NULL,
+    id_reserva_as NUMBER NOT NULL,
+    numero_asiento VARCHAR2(10) NOT NULL,
+    estado VARCHAR2(20) DEFAULT 'Disponible' CHECK (estado IN ('Disponible', 'No disponible')),
+    CONSTRAINT PK_ASIENTO PRIMARY KEY (id_asiento, id_reserva_as),
+    CONSTRAINT FK_ASIENTO_RESERVA FOREIGN KEY (id_reserva_as) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE
+);
+
+CREATE TABLE ASIGNACION_PUERTA(
+    id_vuelo_asig NUMBER NOT NULL,
+    id_puerta_asignada NUMBER NOT NULL,
+    hora_asignacion DATE NOT NULL,
+    CONSTRAINT PK_ASIGNACION_PUERTA PRIMARY KEY (id_vuelo_asig, id_puerta_asignada),
+    CONSTRAINT FK_ASIGNACION_PUERTA_VUELO FOREIGN KEY (id_vuelo_asig) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
+    CONSTRAINT FK_ASIGNACION_PUERTA_PUERTA FOREIGN KEY (id_puerta_asignada) REFERENCES PUERTA(id_puerta) ON DELETE CASCADE
 );
 
 CREATE TABLE EQUIPAJE(
     id_equipaje NUMBER NOT NULL,
-    id_pasajero_eq NUMBER NOT NULL,
-    id_vuelo_eq NUMBER NOT NULL,
+    id_reserva_eq NUMBER NOT NULL,
     peso NUMBER NOT NULL,
     descripcion VARCHAR2(100) NOT NULL,
-    CONSTRAINT PK_EQUIPAJE PRIMARY KEY (id_equipaje),
-    CONSTRAINT FK_EQUIPAJE_PASAJERO FOREIGN KEY (id_pasajero_eq) REFERENCES PASAJERO(documento_identidad) ON DELETE CASCADE,
-    CONSTRAINT FK_EQUIPAJE_VUELO FOREIGN KEY (id_vuelo_eq) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE
+    CONSTRAINT PK_EQUIPAJE PRIMARY KEY (id_reserva_eq, id_equipaje),
+    CONSTRAINT FK_EQUIPAJE_RESERVA FOREIGN KEY (id_reserva_eq) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE
 );
 
 CREATE TABLE SERVICIOS_PASAJERO(
     id_servicio_pasajero NUMBER NOT NULL,
     id_pasajero_ser NUMBER NOT NULL,
+    id_reserva_ser NUMBER NOT NULL,
     nombre_servicio VARCHAR2(100) NOT NULL,
     precio_servicio NUMBER NOT NULL,
     CONSTRAINT PK_SERVICIOS PRIMARY KEY (id_servicio_pasajero),
-    CONSTRAINT FK_SERVICIOS_PASAJERO FOREIGN KEY (id_pasajero_ser) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE
+    CONSTRAINT FK_SERVICIOS_PASAJERO FOREIGN KEY (id_pasajero_ser) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
+    CONSTRAINT FK_SERVICIOS_RESERVA FOREIGN KEY (id_reserva_ser) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE
 );
 
 CREATE TABLE ASISTENCIA(
-    id_asistencia NUMBER NOT NULL,
     id_pasajero_asi NUMBER NOT NULL,
     tipo_asistencia VARCHAR2(99) NOT NULL,
-    CONSTRAINT PK_ASISTENCIA PRIMARY KEY (id_asistencia),
+    CONSTRAINT PK_ASISTENCIA PRIMARY KEY (id_pasajero_asi, tipo_asistencia),
     CONSTRAINT FK_ASISTENCIA_PASAJERO FOREIGN KEY (id_pasajero_asi) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
     CONSTRAINT chck_tipo_asistencia CHECK(tipo_asistencia IN ('Discapacidad', 'Embarazo', 'Tercera Edad', 'Niños'))
+);
+
+CREATE TABLE CHECK_IN(
+    id_check_in NUMBER NOT NULL,
+    id_reserva_check NUMBER NOT NULL,
+    fecha_check_in DATE NOT NULL,
+    estado VARCHAR2(20) CHECK (estado IN ('Completado', 'Cancelado', 'Pendiente')),
+    tipo_check_in VARCHAR2(20) CHECK (tipo_check_in IN ('Presencial', 'Online')),
+    CONSTRAINT PK_CHECK_IN PRIMARY KEY (id_check_in),
+    CONSTRAINT FK_CHECK_IN_RESERVA FOREIGN KEY (id_reserva_check) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE
 );
 
 -- Cambiar formato de la fecha
@@ -209,7 +191,7 @@ CREATE TABLE ASISTENCIA(
 ALTER SESSION SET NLS_DATE_FORMAT = 'DD-MM-YYYY';
 
 
--- Procedimiento para realziar el check-in de un pasajero
+-- Procedimiento para realizar el check-in de un pasajero
 CREATE OR REPLACE PROCEDURE proc_realizar_check_in (
     p_identificador_compra NUMBER,
     p_documento_identidad VARCHAR2,
@@ -237,8 +219,7 @@ BEGIN
 
     -- Validación de formato del documento de identidad (RUN o pasaporte)
     IF p_documento_identidad IS NOT NULL THEN
-        IF REGEXP_LIKE (p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$') OR  -- RUN Chileno
-           REGEXP_LIKE (p_documento_identidad, '^[A-Za-z]{1}[0-9]{5,9}$') THEN -- Pasaporte
+        IF REGEXP_LIKE (p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$') OR REGEXP_LIKE (p_documento_identidad, '^[A-Za-z]{1}[0-9]{5,9}$') THEN 
             v_documento_valido := TRUE;
         ELSE
             RAISE_APPLICATION_ERROR(-20001, 'Documento de identidad inválido.');
@@ -294,7 +275,7 @@ CREATE OR REPLACE TRIGGER TRG_VERIFICAR_VISA
 BEFORE INSERT ON PAIS
 FOR EACH ROW
 BEGIN
-    IF :NER.visa_requerida = 'Sí' THEN
+    IF :NEW.visa_requerida = 'Sí' THEN
         RAISE_APPLICATION_ERROR(-20002, 'Se requiere visa para ingresar a ' || :NEW.nombre);
     END IF;
 END;
@@ -482,45 +463,9 @@ BEGIN
 
     -- Mensaje de confirmación
     COMMIT;
-    DBMS_OUTPUT.PUT_LINE('Compra confirmada para el pasajero ' || p_id_pasajero_comp || ' en el vuelo ' || p_id_vuelo_comp || ' con el asiento ' || p_asiento);
+    DBMS_OUTPUT.PUT_LINE('Compra confirmada para el pasajero ' || p_id_pasajero || ' en el vuelo ' || p_id_vuelo || ' con el asiento ' || p_asiento);
     DBMS_OUTPUT.PUT_LINE('Compra confirmada para el vuelo ' || p_id_vuelo || '. Asiento ' || p_asiento || ' reservado.');
     DBMS_OUTPUT.PUT_LINE('Total pagado: ' || p_total_pago || ' CLP.');
-END;
-/
-
--- Procedimiento para cancelar una compra
-CREATE OR REPLACE PROCEDURE cancelar_compra (
-    p_id_compra NUMBER
-) 
-IS
-    v_id_vuelo NUMBER;
-    v_id_asiento NUMBER;
-BEGIN
-    SELECT id_vuelo_comp, id_asiento
-    FROM COMPRA
-    WHERE id_compra = p_id_compra;
-
-    BEGIN
-        SELECT id_asiento
-        INTO v_id_asiento
-        FROM RESERVA
-        WHERE id_vuelo_res = v_id_vuelo 
-        AND id_pasajero_res = (SELECT id_pasajero_comp FROM COMPRA WHERE id_compra = p_id_compra);
-
-        UPDATE ASIENTO
-        SET estado = 'Disponible'
-        WHERE id_asiento = v_id_asiento;
-
-        DELETE FROM RESERVA
-        WHERE id_vuelo_res = v_id_vuelo
-        AND id_pasajero_res = (SELECT id_pasajero_comp FROM COMPRA WHERE id_compra = p_id_compra);
-    
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20001, 'No se encontró la compra con el ID especificado.');
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE_APPLICATION_ERROR(-20002, 'Ha ocurrido un error al intentar cancelar la compra.');
 END;
 /
 
