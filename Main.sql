@@ -32,10 +32,11 @@ CREATE TABLE PAIS(
     nombre VARCHAR2(100) NOT NULL,
     visa_requerida VARCHAR2(20),
     tipo_visa VARCHAR2(99),
-    pasaporte_requerido VARCHAR2(20) CHECK (pasaporte_requerido IN ('Sí', 'No')),
+    pasaporte_requerido VARCHAR2(20),
     CONSTRAINT PK_PAIS PRIMARY KEY (id_pais),
     CONSTRAINT chck_visa_pais CHECK (visa_requerida IN ('Sí', 'No')),
-    CONSTRAINT chck_tipo_visa CHECK (visa_requerida = 'No' OR tipo_visa IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo'))
+    CONSTRAINT chck_tipo_visa CHECK (visa_requerida = 'No' OR tipo_visa IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo')),
+    CONSTRAINT chck_pasaporte CHECK (pasaporte_requerido IN ('Sí', 'No'))
 );
 
 CREATE TABLE CIUDAD(
@@ -227,7 +228,20 @@ BEGIN
 END;
 /
 
--- Trigger para actualizar el estado de vuelo
+-- Trigger para actualizar el estado de vuelo cancelado
+
+CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO_CANCELADO
+AFTER UPDATE ON RESERVA
+FOR EACH ROW
+BEGIN
+    IF (:NEW.estado = 'Cancelado') THEN
+        UPDATE VUELO
+        SET estado = 'Cancelado' 
+        WHERE id_vuelo = :NEW.id_vuelo_res;
+    END IF;
+END;
+
+-- Trigger para actualizar el estado de vuelo despegado y aterrizado
 
 CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO
 AFTER INSERT OR UPDATE ON VUELO
@@ -244,111 +258,45 @@ BEGIN
     END IF;
 END;
 
--- Trigger para actualizar el estado de compra
-
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_COMPRA
-AFTER INSERT OR UPDATE ON COMPRA
-FOR EACH ROW
-BEGIN
-    IF (:NEW.fecha_compra < SYSDATE) THEN
-        UPDATE COMPRA
-        SET estado = 'Confirmado' 
-        WHERE id_compra = :NEW.id_compra;
-    END IF;
-END;
-
-
--- Trigger para actualizar el estado de asistencia
-
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_ASISTENCIA
-AFTER INSERT OR UPDATE ON ASISTENCIA
-FOR EACH ROW
-BEGIN
-    IF (:NEW.tipo_asistencia = 'Discapacidad') THEN
-        UPDATE ASISTENCIA
-        SET estado = 'Discapacidad' 
-        WHERE id_asistencia = :NEW.id_asistencia;
-    ELSIF (:NEW.tipo_asistencia = 'Embarazo') THEN
-        UPDATE ASISTENCIA
-        SET estado = 'Embarazo' 
-        WHERE id_asistencia = :NEW.id_asistencia;
-    ELSIF (:NEW.tipo_asistencia = 'Tercera Edad') THEN
-        UPDATE ASISTENCIA
-        SET estado = 'Tercera Edad' 
-        WHERE id_asistencia = :NEW.id_asistencia;
-    ELSIF (:NEW.tipo_asistencia = 'Niños') THEN
-        UPDATE ASISTENCIA
-        SET estado = 'Niños' 
-        WHERE id_asistencia = :NEW.id_asistencia;
-    END IF;
-END;
-
--- Trigger para actualizar el estado de servicios
-
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_SERVICIOS
-AFTER INSERT OR UPDATE ON SERVICIOS_PASAJERO
-FOR EACH ROW
-BEGIN
-    IF (:NEW.precio_servicio > 100000) THEN
-        UPDATE SERVICIOS_PASAJERO
-        SET estado = 'Caro' 
-        WHERE id_servicio_pasajero = :NEW.id_servicio_pasajero;
-    END IF;
-END;
-
--- Trigger para actualizar el monto total de la compra
-
-CREATE OR REPLACE TRIGGER RECUENTO_TOTAL_COMPRA
-AFTER INSERT OR UPDATE ON COMPRA
-FOR EACH ROW
-BEGIN
-    UPDATE COMPRA
-    SET monto_total_compra = (SELECT SUM(precio_servicio) FROM SERVICIOS_PASAJERO WHERE id_pasajero_ser = :NEW.id_pasajero_comp)
-    WHERE id_compra = :NEW.id_compra;
-END;
-
--- Trigger para liberar y eliminar asientos al cancelar una compra
-
-CREATE OR REPLACE TRIGGER LIBERAR_ASIENTOS
-AFTER DELETE ON COMPRA
-FOR EACH ROW
-BEGIN
-    DELETE FROM RESERVA
-    WHERE id_pasajero_res = :OLD.id_pasajero_comp;
-END;
-
 -- Trigger para liberar y eliminar asientos al cancelar una reserva
 
 CREATE OR REPLACE TRIGGER LIBERAR_ASIENTOS_RESERVA
 AFTER DELETE ON RESERVA
 FOR EACH ROW
 BEGIN
-    DELETE FROM RESERVA
-    WHERE id_pasajero_res = :OLD.id_pasajero_res;
+    UPDATE ASIENTO
+    SET estado = 'Disponible'
+    WHERE id_asiento = :OLD.id_asiento;
 END;
 
--- Trigger verificar peso del equipaje
-CREATE OR REPLACE TRIGGER VERIFICAR_PESO_EQUIPAJE
-BEFORE INSERT ON EQUIPAJE
+-- Trigger verificar peso del equipaje y agregar un cargo extra
+
+CREATE OR REPLACE TRIGGER TRG_VERIFICAR_PESO_EQUIPAJE
+BEFORE INSERT ON RESERVA
 FOR EACH ROW
 BEGIN
-    IF (:NEW.peso > 23) THEN
-        RAISE_APPLICATION_ERROR(-20002, 'El peso del equipaje no puede superar los 23 kg.');
+    IF :NEW.id_equipaje_res IS NOT NULL THEN
+        IF :NEW.id_equipaje_res > 23 THEN
+            RAISE_APPLICATION_ERROR(-20004, 'El peso del equipaje excede el límite permitido. Por favor, pague una multa o reduzca el peso.');
+        END IF;
     END IF;
 END;
 
--- Trigger para actualizar de un vuelo al reservar o liberar un asiento
+-- Trigger para Actualizar el estado de la reserva
 
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO_RESERVA
-AFTER INSERT OR DELETE ON RESERVA
+CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_RESERVA
+AFTER INSERT OR UPDATE ON RESERVA
 FOR EACH ROW
 BEGIN
-    UPDATE VUELO
-    SET estado = 'En vuelo' 
-    WHERE id_vuelo = :NEW.id_vuelo_res;
+    IF (:NEW.fecha_hora_reserva < SYSDATE) THEN
+        UPDATE RESERVA
+        SET estado = 'Confirmada' 
+        WHERE id_reserva = :NEW.id_reserva;
+    END IF;
 END;
 
 -- Procedimiento para realizar el check-in de un pasajero
+
 CREATE OR REPLACE PROCEDURE proc_realizar_check_in (
     p_identificador_compra NUMBER,
     p_documento_identidad VARCHAR2,
