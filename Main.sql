@@ -93,10 +93,15 @@ CREATE TABLE ASIENTO(
     CONSTRAINT PK_ASIENTO PRIMARY KEY (id_asiento)
 );
 
-CREATE TABLE EQUIPAJE(
+CREATE TABLE EQUIPAJE (
     id_equipaje NUMBER NOT NULL,
+    tipo_equipaje VARCHAR2(20) CHECK (tipo_equipaje IN ('Mano', 'De Bodega')) NOT NULL, -- Tipo de equipaje: 'Mano' o 'De Bodega'
     peso NUMBER NOT NULL,
     descripcion VARCHAR2(100) NOT NULL,
+    alto NUMBER NOT NULL,      -- Altura del equipaje en cm
+    ancho NUMBER NOT NULL,     -- Ancho del equipaje en cm
+    profundidad NUMBER NOT NULL, -- Profundidad del equipaje en cm
+    cobro_extra NUMBER DEFAULT 0, -- Cobro extra por exceso de tamaño o peso
     CONSTRAINT PK_EQUIPAJE PRIMARY KEY (id_equipaje)
 );
 
@@ -169,7 +174,34 @@ CREATE TABLE CHECK_IN(
 ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'DD-MM-YYYY HH24:MI:SS';
 
 
+--Trigger para Validar el Tamaño del Equipaje y hacer un cobro extra 
+CREATE OR REPLACE TRIGGER VALIDAR_TAMANO_PESO_Y_COBRO_EQUIPAJE
+BEFORE INSERT OR UPDATE ON EQUIPAJE
+FOR EACH ROW
+BEGIN
+    -- Inicializar el cobro extra en 0
+    :NEW.cobro_extra := 0;
 
+    -- Validaciones según el tipo de equipaje
+    IF :NEW.tipo_equipaje = 'Mano' THEN
+        -- Validación de tamaño y peso para equipaje de mano
+        IF :NEW.alto > 55 OR :NEW.ancho > 35 OR :NEW.profundidad > 25 THEN
+            :NEW.cobro_extra := 22000; -- Cobro extra por exceso de tamaño
+        END IF;
+        IF :NEW.peso > 10 THEN
+            :NEW.cobro_extra := :NEW.cobro_extra + 25000; -- Cobro extra por exceso de peso
+        END IF;
+    ELSIF :NEW.tipo_equipaje = 'De Bodega' THEN
+        -- Validación de tamaño y peso para equipaje de bodega
+        IF :NEW.alto > 80 OR :NEW.ancho > 50 OR :NEW.profundidad > 30 THEN
+            :NEW.cobro_extra := 45000; -- Cobro extra por exceso de tamaño
+        END IF;
+        IF :NEW.peso > 23 THEN
+            :NEW.cobro_extra := :NEW.cobro_extra + 50000; -- Cobro extra por exceso de peso
+        END IF;
+    END IF;
+END;
+/
 
 
 --Trigger para Verificar la Edad Mínima a un Vuelo sin asistente o acompañante
@@ -363,6 +395,26 @@ BEGIN
     END IF;
 END;
 
+-- Trigger para actualizar el estado de vuelo despegado y aterrizado
+CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_ASIENTO_FIN_VUELO
+AFTER UPDATE OF estado ON VUELO
+FOR EACH ROW
+BEGIN
+    -- Verificar si el estado del vuelo ha cambiado a "Aterrizado"
+    IF :NEW.estado = 'Aterrizado' THEN
+        -- Actualizar los asientos del vuelo para que estén disponibles
+        UPDATE ASIENTO
+        SET estado = 'Disponible'
+        WHERE id_asiento IN (
+            SELECT id_asiento
+            FROM RESERVA
+            WHERE id_vuelo_res = :NEW.id_vuelo
+        );
+    END IF;
+END;
+/
+
+
 -- Trigger para liberar y eliminar asientos al cancelar una reserva
 
 CREATE OR REPLACE TRIGGER LIBERAR_ASIENTOS_RESERVA
@@ -374,18 +426,6 @@ BEGIN
     WHERE id_asiento = :OLD.id_asiento;
 END;
 
--- Trigger verificar peso del equipaje y agregar un cargo extra
-
-CREATE OR REPLACE TRIGGER TRG_VERIFICAR_PESO_EQUIPAJE
-BEFORE INSERT ON RESERVA
-FOR EACH ROW
-BEGIN
-    IF :NEW.id_equipaje_res IS NOT NULL THEN
-        IF :NEW.id_equipaje_res > 23 THEN
-            RAISE_APPLICATION_ERROR(-20004, 'El peso del equipaje excede el límite permitido. Por favor, pague una multa o reduzca el peso.');
-        END IF;
-    END IF;
-END;
 
 -- Trigger para Actualizar el estado de la reserva
 
