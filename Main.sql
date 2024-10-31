@@ -109,7 +109,7 @@ CREATE TABLE PASAJERO(
     telefono_pasajero VARCHAR2(99) NOT NULL,
     documento_identidad VARCHAR(20) NOT NULL,
     asistencia VARCHAR2(20) CHECK (asistencia IN ('Sí', 'No')),
-    edad NUMBER CHECK (edad >= 0),
+    edad NUMBER GENERATED ALWAYS AS (FLOOR(MONTHS_BETWEEN(SYSDATE, fecha_nacimiento) / 12)) VIRTUAL,
     CONSTRAINT PK_PASAJERO PRIMARY KEY (id_pasajero),
     CONSTRAINT chck_telefono CHECK (telefono_pasajero LIKE '+%_____%')
 );
@@ -167,6 +167,31 @@ CREATE TABLE CHECK_IN(
 -- Cambiar formato de la fecha
 
 ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'DD-MM-YYYY HH24:MI:SS';
+
+
+
+
+
+--Trigger para Verificar la Edad Mínima a un Vuelo sin asistente o acompañante
+CREATE OR REPLACE TRIGGER VERIFICAR_Y_ACTUALIZAR_ASISTENCIA_MENOR_EDAD
+BEFORE INSERT OR UPDATE ON PASAJERO
+FOR EACH ROW
+BEGIN
+    -- Verificar si el pasajero es menor de 18 años
+    IF :NEW.edad < 18 THEN
+        -- Si el campo asistencia está en 'No' o es NULL, cambiarlo a 'Sí'
+        IF :NEW.asistencia IS NULL OR :NEW.asistencia = 'No' THEN
+            :NEW.asistencia := 'Sí';
+        END IF;
+        
+        -- Si alguien intenta cambiar asistencia a 'No', lanzar un error
+        IF :NEW.asistencia = 'No' THEN
+            RAISE_APPLICATION_ERROR(-20008, 'El pasajero es menor de edad y requiere un asistente o acompañante para volar.');
+        END IF;
+    END IF;
+END;
+/
+
 
 -- Trigger para verificar visa
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_VISA
@@ -246,7 +271,7 @@ BEGIN
     WHERE id_pasajero_res = :NEW.id_pasajero_res;
 
     -- Verificar si se excede el límite de equipajes
-    IF v_numero_equipajes >= v_limite_equipajes THEN
+    IF v_numero_equipajes > v_limite_equipajes THEN
         RAISE_APPLICATION_ERROR(-20006, 'El pasajero ha excedido el límite permitido de equipajes.');
     END IF;
 END;
