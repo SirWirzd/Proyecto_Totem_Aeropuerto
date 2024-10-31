@@ -47,44 +47,45 @@ CREATE TABLE CIUDAD(
     CONSTRAINT FK_CIUDAD_PAIS FOREIGN KEY (id_pais) REFERENCES PAIS(id_pais) ON DELETE CASCADE
 );
 
-CREATE TABLE PUERTA (
-    id_puerta NUMBER NOT NULL,
-    nombre VARCHAR2(50) NOT NULL,
-    CONSTRAINT PK_PUERTA PRIMARY KEY (id_puerta)
+CREATE TABLE AEROPUERTO(
+    id_aeropuerto NUMBER NOT NULL,
+    nombre VARCHAR2(100) NOT NULL,
+    id_ciudad NUMBER NOT NULL,
+    CONSTRAINT PK_AEROPUERTO PRIMARY KEY (id_aeropuerto),
+    CONSTRAINT FK_AEROPUERTO_CIUDAD FOREIGN KEY (id_ciudad) REFERENCES CIUDAD(id_ciudad) ON DELETE CASCADE
 );
 
 CREATE TABLE TERMINAL_AEROPUERTO (
     id_terminal NUMBER NOT NULL,
     nombre VARCHAR2(50) NOT NULL,
-    id_puerta NUMBER NOT NULL,
+    id_aeropuerto NUMBER NOT NULL,
     CONSTRAINT PK_TERMINAL PRIMARY KEY (id_terminal),
-    CONSTRAINT FK_TERMINAL_PUERTA FOREIGN KEY (id_puerta) REFERENCES PUERTA(id_puerta) ON DELETE CASCADE
+    CONSTRAINT FK_TERMINAL_AEROPUERTO FOREIGN KEY (id_aeropuerto) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE
 );
 
-CREATE TABLE AEROPUERTO(
-    id_aeropuerto NUMBER NOT NULL,
-    nombre VARCHAR2(100) NOT NULL,
-    id_ciudad NUMBER NOT NULL,
+CREATE TABLE PUERTA (
+    id_puerta NUMBER NOT NULL,
+    nombre VARCHAR2(50) NOT NULL,
     id_terminal NUMBER NOT NULL,
-    CONSTRAINT PK_AEROPUERTO PRIMARY KEY (id_aeropuerto),
-    CONSTRAINT FK_AEROPUERTO_CIUDAD FOREIGN KEY (id_ciudad) REFERENCES CIUDAD(id_ciudad) ON DELETE CASCADE,
-    CONSTRAINT FK_AEROPUERTO_TERMINAL FOREIGN KEY (id_terminal) REFERENCES TERMINAL_AEROPUERTO(id_terminal) ON DELETE CASCADE
+    CONSTRAINT PK_PUERTA PRIMARY KEY (id_puerta),
+    CONSTRAINT FK_PUERTA_TERMINAL FOREIGN KEY (id_terminal) REFERENCES TERMINAL_AEROPUERTO(id_terminal) ON DELETE CASCADE
+);
+
+CREATE TABLE AEROLINEA(
+    id_aerolinea NUMBER NOT NULL,
+    nombre_aerolinea VARCHAR2(100) NOT NULL,
+    CONSTRAINT PK_AEROLINEA PRIMARY KEY (id_aerolinea)
 );
 
 CREATE TABLE AVION (
     id_avion NUMBER NOT NULL,
     modelo VARCHAR2(50) NOT NULL,
     capacidad NUMBER NOT NULL,
-    CONSTRAINT PK_AVION PRIMARY KEY (id_avion)
+    id_aerolinea NUMBER NOT NULL,
+    CONSTRAINT PK_AVION PRIMARY KEY (id_avion),
+    CONSTRAINT FK_AVION_AEROLINEA FOREIGN KEY (id_aerolinea) REFERENCES AEROLINEA(id_aerolinea) ON DELETE CASCADE
 );
 
-CREATE TABLE AEROLINEA(
-    id_aerolinea NUMBER NOT NULL,
-    id_avion NUMBER NOT NULL,
-    nombre_aerolinea VARCHAR2(100) NOT NULL,
-    CONSTRAINT PK_AEROLINEA PRIMARY KEY (id_aerolinea),
-    CONSTRAINT FK_AVION_AEROLINEA FOREIGN KEY (id_avion) REFERENCES AVION(id_avion) ON DELETE CASCADE
-);
 
 CREATE TABLE ASIENTO(
     id_asiento NUMBER NOT NULL,
@@ -95,13 +96,13 @@ CREATE TABLE ASIENTO(
 
 CREATE TABLE EQUIPAJE (
     id_equipaje NUMBER NOT NULL,
-    tipo_equipaje VARCHAR2(20) CHECK (tipo_equipaje IN ('Mano', 'De Bodega')) NOT NULL, -- Tipo de equipaje: 'Mano' o 'De Bodega'
+    tipo_equipaje VARCHAR2(20) CHECK (tipo_equipaje IN ('Mano', 'De Bodega')) NOT NULL,
     peso NUMBER NOT NULL,
     descripcion VARCHAR2(100) NOT NULL,
-    alto NUMBER NOT NULL,      -- Altura del equipaje en cm
-    ancho NUMBER NOT NULL,     -- Ancho del equipaje en cm
-    profundidad NUMBER NOT NULL, -- Profundidad del equipaje en cm
-    cobro_extra NUMBER DEFAULT 0, -- Cobro extra por exceso de tamaño o peso
+    alto NUMBER NOT NULL,
+    ancho NUMBER NOT NULL,
+    profundidad NUMBER NOT NULL,
+    cobro_extra NUMBER DEFAULT 0,
     CONSTRAINT PK_EQUIPAJE PRIMARY KEY (id_equipaje)
 );
 
@@ -137,36 +138,35 @@ CREATE TABLE VUELO(
 
 CREATE TABLE RESERVA(
     id_reserva NUMBER NOT NULL,
-    id_pasajero_res NUMBER NOT NULL,
-    id_vuelo_res NUMBER NOT NULL,
+    id_pasajero NUMBER NOT NULL,
+    id_vuelo NUMBER NOT NULL,
     id_asiento NUMBER NOT NULL,
-    id_equipaje_res NUMBER NOT NULL,
-    id_aeropuerto_res NUMBER NOT NULL,
-    id_terminal_res NUMBER NOT NULL,
-    id_puerta_res NUMBER NOT NULL,
+    id_equipaje NUMBER NOT NULL,
+    id_aeropuerto NUMBER NOT NULL,
+    id_terminal NUMBER NOT NULL,
+    id_puerta NUMBER NOT NULL,
     fecha_hora_reserva TIMESTAMP NOT NULL,
-    motivo_viaje VARCHAR2(100) NOT NULL,
-    tipo_boleto VARCHAR2(50) NOT NULL CHECK (tipo_boleto IN ('Económico', 'Ejecutivo', 'Primera Clase')),
+    motivo_viaje VARCHAR2(100) NOT NULL CHECK (motivo_viaje IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo')),
+    tipo_boleto VARCHAR2(50) CHECK (tipo_boleto IN ('Económico', 'Ejecutivo', 'Primera Clase')),
     estado VARCHAR2(20) CHECK (estado IN ('Confirmada', 'Cancelado', 'Pendiente')),
     CONSTRAINT PK_RESERVA PRIMARY KEY (id_reserva),
-    CONSTRAINT FK_RESERVA_PASAJERO FOREIGN KEY (id_pasajero_res) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_VUELO FOREIGN KEY (id_vuelo_res) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
+    CONSTRAINT FK_RESERVA_PASAJERO FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
+    CONSTRAINT FK_RESERVA_VUELO FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
     CONSTRAINT FK_RESERVA_ASIENTO FOREIGN KEY (id_asiento) REFERENCES ASIENTO(id_asiento) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_EQUIPAJE FOREIGN KEY (id_equipaje_res) REFERENCES EQUIPAJE(id_equipaje) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_AEROPUERTO FOREIGN KEY (id_aeropuerto_res) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_TERMINAL FOREIGN KEY (id_terminal_res) REFERENCES TERMINAL_AEROPUERTO(id_terminal) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_PUERTA FOREIGN KEY (id_puerta_res) REFERENCES PUERTA(id_puerta) ON DELETE CASCADE,
-    CONSTRAINT chck_motivo_viaje CHECK (motivo_viaje IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo'))
+    CONSTRAINT FK_RESERVA_EQUIPAJE FOREIGN KEY (id_equipaje) REFERENCES EQUIPAJE(id_equipaje) ON DELETE CASCADE,
+    CONSTRAINT FK_RESERVA_AEROPUERTO FOREIGN KEY (id_aeropuerto) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE,
+    CONSTRAINT FK_RESERVA_TERMINAL FOREIGN KEY (id_terminal) REFERENCES TERMINAL_AEROPUERTO(id_terminal) ON DELETE CASCADE,
+    CONSTRAINT FK_RESERVA_PUERTA FOREIGN KEY (id_puerta) REFERENCES PUERTA(id_puerta) ON DELETE CASCADE
 );
 
 CREATE TABLE CHECK_IN(
     id_check_in NUMBER NOT NULL,
-    id_reserva_check NUMBER NOT NULL,
+    id_reserva NUMBER NOT NULL,
     fecha_hora_check_in TIMESTAMP NOT NULL,
     estado VARCHAR2(20) CHECK (estado IN ('Completado', 'Cancelado', 'Pendiente')),
     tipo_check_in VARCHAR2(20) CHECK (tipo_check_in IN ('Presencial', 'Online')),
     CONSTRAINT PK_CHECK_IN PRIMARY KEY (id_check_in),
-    CONSTRAINT FK_CHECK_IN_RESERVA FOREIGN KEY (id_reserva_check) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE
+    CONSTRAINT FK_CHECK_IN_RESERVA FOREIGN KEY (id_reserva) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE
 );
 
 -- Cambiar formato de la fecha
