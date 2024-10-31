@@ -219,6 +219,19 @@ BEGIN
     END IF;
 END;
 
+
+--  Trigger para Actualizar el Estado del Asiento Cuando un Pasajero Hace Check-In
+CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_ASIENTO_CHECK_IN
+AFTER INSERT ON CHECK_IN
+FOR EACH ROW
+BEGIN
+    UPDATE ASIENTO
+    SET estado = 'No disponible'
+    WHERE id_asiento = :NEW.id_asiento;
+END;
+/
+
+
 -- Trigger para verificar la duración del vuelo
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_DURACION
 BEFORE INSERT OR UPDATE ON VUELO
