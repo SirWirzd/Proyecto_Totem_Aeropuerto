@@ -533,3 +533,100 @@ EXCEPTION
         RAISE;
 END;
 /
+
+-- Procedimiento para asignar un asiento disponible si el pasajero no tiene uno asignado
+CREATE OR REPLACE PROCEDURE asignar_asiento_disponible (
+    p_id_reserva IN NUMBER
+) IS
+    v_id_vuelo NUMBER;
+    v_id_asiento NUMBER;
+BEGIN
+    -- Obtener el ID del vuelo de la reserva
+    SELECT id_vuelo_res
+    INTO v_id_vuelo
+    FROM RESERVA
+    WHERE id_reserva = p_id_reserva;
+    
+    -- Buscar un asiento disponible en el vuelo especificado
+    SELECT id_asiento
+    INTO v_id_asiento
+    FROM ASIENTO
+    WHERE estado = 'Disponible'
+      AND id_asiento IN (
+          SELECT id_asiento
+          FROM ASIENTO
+          WHERE id_asiento NOT IN (
+              SELECT id_asiento
+              FROM RESERVA
+              WHERE id_vuelo_res = v_id_vuelo
+          )
+      )
+      AND ROWNUM = 1;  -- Toma el primer asiento disponible
+
+    -- Actualizar la reserva con el asiento asignado
+    UPDATE RESERVA
+    SET id_asiento = v_id_asiento
+    WHERE id_reserva = p_id_reserva;
+
+    -- Cambiar el estado del asiento a "No disponible"
+    UPDATE ASIENTO
+    SET estado = 'No disponible'
+    WHERE id_asiento = v_id_asiento;
+
+    COMMIT;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20014, 'No hay asientos disponibles para este vuelo.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+
+-- Procedimiento para notificar a los pasajeros de un cambio de puerta de embarque
+CREATE OR REPLACE PROCEDURE notificar_cambio_puerta (
+    p_id_vuelo IN NUMBER,
+    p_id_pasajero IN NUMBER
+) IS
+    v_nombre VARCHAR2(100);
+    v_telefono_pasajero VARCHAR2(20);
+    v_puerta NUMBER;
+BEGIN
+    -- Obtener los datos del pasajero y la nueva puerta de embarque del vuelo
+    SELECT p.nombre, p.telefono_pasajero, v.id_puerta
+    INTO v_nombre, v_telefono_pasajero, v_puerta
+    FROM PASAJERO p
+    JOIN RESERVA r ON p.id_pasajero = r.id_pasajero_res
+    JOIN VUELO v ON r.id_vuelo_res = v.id_vuelo
+    WHERE v.id_vuelo = p_id_vuelo
+      AND p.id_pasajero = p_id_pasajero;
+
+    -- Simulación de notificación al pasajero (mensaje de texto)
+    RAISE_APPLICATION_ERROR(-20015,
+        'Estimado ' || v_nombre || ', su puerta de embarque ha sido cambiada a la puerta ' || v_puerta || '. Gracias.');
+END;
+/
+
+
+-- Procedimiento para informar sobre el retraso de un vuelo
+CREATE OR REPLACE PROCEDURE notificar_retraso_vuelo (
+    p_id_vuelo IN NUMBER,
+    p_id_pasajero IN NUMBER,
+    p_nueva_hora_salida TIMESTAMP
+) IS
+    v_nombre VARCHAR2(100);
+    v_telefono_pasajero VARCHAR2(20);
+BEGIN
+    -- Obtener los datos del pasajero
+    SELECT nombre, telefono_pasajero
+    INTO v_nombre, v_telefono_pasajero
+    FROM PASAJERO
+    WHERE id_pasajero = p_id_pasajero;
+
+    -- Simulación de notificación al pasajero sobre el retraso del vuelo
+    RAISE_APPLICATION_ERROR(-20016,
+        'Estimado ' || v_nombre || ', su vuelo ha sido retrasado. La nueva hora de salida es ' || TO_CHAR(p_nueva_hora_salida, 'DD-MM-YYYY HH24:MI') || '. Gracias.');
+END;
+/
