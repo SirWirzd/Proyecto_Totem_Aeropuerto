@@ -27,16 +27,17 @@ DROP TABLE CIUDAD CASCADE CONSTRAINTS;
 DROP TABLE PASAJERO CASCADE CONSTRAINTS;
 DROP TABLE PAIS CASCADE CONSTRAINTS;
 
-CREATE TABLE PAIS(
+CREATE TABLE PAIS (
     id_pais NUMBER NOT NULL,
     nombre VARCHAR2(100) NOT NULL,
-    visa_requerida VARCHAR2(20),
+    visa_requerida VARCHAR2(20) CHECK (visa_requerida IN ('Sí', 'No')) NOT NULL,
     tipo_visa VARCHAR2(99),
-    pasaporte_requerido VARCHAR2(20),
+    pasaporte_requerido VARCHAR2(20) CHECK (pasaporte_requerido IN ('Sí', 'No')) NOT NULL,
     CONSTRAINT PK_PAIS PRIMARY KEY (id_pais),
-    CONSTRAINT chck_visa_pais CHECK (visa_requerida IN ('Sí', 'No')),
-    CONSTRAINT chck_tipo_visa CHECK (visa_requerida = 'No' OR tipo_visa IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo')),
-    CONSTRAINT chck_pasaporte CHECK (pasaporte_requerido IN ('Sí', 'No'))
+    CONSTRAINT chck_visa_tipo CHECK (
+        (visa_requerida = 'No' AND tipo_visa IS NULL) OR 
+        (visa_requerida = 'Sí' AND tipo_visa IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo'))
+    )
 );
 
 CREATE TABLE CIUDAD(
@@ -87,24 +88,13 @@ CREATE TABLE AVION (
 );
 
 
-CREATE TABLE ASIENTO(
+CREATE TABLE ASIENTO (
     id_asiento NUMBER NOT NULL,
     numero_asiento VARCHAR2(10) NOT NULL,
     estado VARCHAR2(20) DEFAULT 'Disponible' CHECK (estado IN ('Disponible', 'No disponible')),
     CONSTRAINT PK_ASIENTO PRIMARY KEY (id_asiento)
 );
 
-CREATE TABLE EQUIPAJE (
-    id_equipaje NUMBER NOT NULL,
-    tipo_equipaje VARCHAR2(20) CHECK (tipo_equipaje IN ('Mano', 'De Bodega')) NOT NULL,
-    peso NUMBER NOT NULL,
-    descripcion VARCHAR2(100) NOT NULL,
-    alto NUMBER NOT NULL,
-    ancho NUMBER NOT NULL,
-    profundidad NUMBER NOT NULL,
-    cobro_extra NUMBER DEFAULT 0,
-    CONSTRAINT PK_EQUIPAJE PRIMARY KEY (id_equipaje)
-);
 
 CREATE TABLE PASAJERO(
     id_pasajero NUMBER NOT NULL,
@@ -115,10 +105,26 @@ CREATE TABLE PASAJERO(
     telefono_pasajero VARCHAR2(99) NOT NULL,
     documento_identidad VARCHAR(20) NOT NULL,
     asistencia VARCHAR2(20) CHECK (asistencia IN ('Sí', 'No')),
-    edad NUMBER GENERATED ALWAYS AS (FLOOR(MONTHS_BETWEEN(SYSDATE, fecha_nacimiento) / 12)) VIRTUAL,
     CONSTRAINT PK_PASAJERO PRIMARY KEY (id_pasajero),
     CONSTRAINT chck_telefono CHECK (telefono_pasajero LIKE '+%_____%')
 );
+
+
+CREATE TABLE EQUIPAJE (
+    id_equipaje NUMBER NOT NULL,
+    id_pasajero NUMBER NOT NULL,
+    tipo_equipaje VARCHAR2(20) CHECK (tipo_equipaje IN ('Mano', 'De Bodega')) NOT NULL,
+    peso NUMBER NOT NULL,
+    descripcion VARCHAR2(100) NOT NULL,
+    alto NUMBER NOT NULL,
+    ancho NUMBER NOT NULL,
+    profundidad NUMBER NOT NULL,
+    cobro_extra NUMBER DEFAULT 0,
+    CONSTRAINT PK_EQUIPAJE PRIMARY KEY (id_equipaje),
+    CONSTRAINT FK_EQUIPAJE_PASAJERO FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE
+);
+
+
 
 CREATE TABLE VUELO(
     id_vuelo NUMBER NOT NULL,
@@ -136,15 +142,13 @@ CREATE TABLE VUELO(
     CONSTRAINT FK_VUELO_AEROPUERTO_DESTINO FOREIGN KEY (id_aeropuerto_destino) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE 
 );
 
-CREATE TABLE RESERVA(
+CREATE TABLE RESERVA (
     id_reserva NUMBER NOT NULL,
     id_pasajero NUMBER NOT NULL,
     id_vuelo NUMBER NOT NULL,
     id_asiento NUMBER NOT NULL,
     id_equipaje NUMBER NOT NULL,
     id_aeropuerto NUMBER NOT NULL,
-    id_terminal NUMBER NOT NULL,
-    id_puerta NUMBER NOT NULL,
     fecha_hora_reserva TIMESTAMP NOT NULL,
     motivo_viaje VARCHAR2(100) NOT NULL CHECK (motivo_viaje IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo')),
     tipo_boleto VARCHAR2(50) CHECK (tipo_boleto IN ('Económico', 'Ejecutivo', 'Primera Clase')),
@@ -154,10 +158,9 @@ CREATE TABLE RESERVA(
     CONSTRAINT FK_RESERVA_VUELO FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
     CONSTRAINT FK_RESERVA_ASIENTO FOREIGN KEY (id_asiento) REFERENCES ASIENTO(id_asiento) ON DELETE CASCADE,
     CONSTRAINT FK_RESERVA_EQUIPAJE FOREIGN KEY (id_equipaje) REFERENCES EQUIPAJE(id_equipaje) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_AEROPUERTO FOREIGN KEY (id_aeropuerto) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_TERMINAL FOREIGN KEY (id_terminal) REFERENCES TERMINAL_AEROPUERTO(id_terminal) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_PUERTA FOREIGN KEY (id_puerta) REFERENCES PUERTA(id_puerta) ON DELETE CASCADE
+    CONSTRAINT FK_RESERVA_AEROPUERTO FOREIGN KEY (id_aeropuerto) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE
 );
+
 
 CREATE TABLE CHECK_IN(
     id_check_in NUMBER NOT NULL,
@@ -168,6 +171,28 @@ CREATE TABLE CHECK_IN(
     CONSTRAINT PK_CHECK_IN PRIMARY KEY (id_check_in),
     CONSTRAINT FK_CHECK_IN_RESERVA FOREIGN KEY (id_reserva) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE
 );
+
+CREATE TABLE DOCUMENTO_EMBARQUE (
+    id_documento NUMBER NOT NULL,
+    id_reserva NUMBER NOT NULL,
+    nombre_pasajero VARCHAR2(100) NOT NULL,
+    apellido_pasajero VARCHAR2(100) NOT NULL,
+    numero_vuelo VARCHAR2(20) NOT NULL,
+    aerolinea VARCHAR2(100) NOT NULL,
+    destino VARCHAR2(100) NOT NULL,
+    fecha_salida TIMESTAMP NOT NULL,
+    id_terminal NUMBER NOT NULL,
+    id_puerta NUMBER NOT NULL,
+    asiento VARCHAR2(10) NOT NULL,
+    tipo_boleto VARCHAR2(50) NOT NULL CHECK (tipo_boleto IN ('Económico', 'Ejecutivo', 'Primera Clase')),
+    fecha_hora TIMESTAMP NOT NULL,
+    CONSTRAINT PK_DOCUMENTO_EMBARQUE PRIMARY KEY (id_documento),
+    CONSTRAINT FK_DOCUMENTO_EMBARQUE_RESERVA FOREIGN KEY (id_reserva) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE,
+    CONSTRAINT FK_DOCUMENTO_EMBARQUE_TERMINAL FOREIGN KEY (id_terminal) REFERENCES TERMINAL_AEROPUERTO(id_terminal) ON DELETE CASCADE,
+    CONSTRAINT FK_DOCUMENTO_EMBARQUE_PUERTA FOREIGN KEY (id_puerta) REFERENCES PUERTA(id_puerta) ON DELETE CASCADE
+);
+
+
 
 -- Cambiar formato de la fecha
 
