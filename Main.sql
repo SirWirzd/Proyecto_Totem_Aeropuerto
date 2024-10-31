@@ -309,6 +309,20 @@ BEGIN
 END;
 /
 
+--Trigger para Restringir Actualización de Fecha de Vuelo si Faltan Menos de 24 Horas
+CREATE OR REPLACE TRIGGER RESTRINGIR_ACTUALIZACION_FECHA_VUELO
+BEFORE UPDATE OF fecha_hora_salida ON VUELO
+FOR EACH ROW
+BEGIN
+    -- Verificar si faltan menos de 24 horas para la salida del vuelo
+    IF :OLD.fecha_hora_salida - INTERVAL '1' DAY < SYSDATE THEN
+        -- Restringir la actualización y mostrar un mensaje de error
+        RAISE_APPLICATION_ERROR(-20013, 'No se permite actualizar la fecha de salida ya que faltan menos de 24 horas para el vuelo.');
+    END IF;
+END;
+/
+
+
 -- Trigger para Validar Disponibilidad de Puertas al Asignar Vuelos
 CREATE OR REPLACE TRIGGER VALIDAR_DISPONIBILIDAD_PUERTA
 BEFORE INSERT OR UPDATE ON VUELO
