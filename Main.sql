@@ -231,6 +231,73 @@ BEGIN
 END;
 /
 
+--  Trigger para Limitar el Número de Equipajes por Pasajero
+CREATE OR REPLACE TRIGGER LIMITE_EQUIPAJES_POR_PASAJERO
+BEFORE INSERT ON RESERVA
+FOR EACH ROW
+DECLARE
+    v_numero_equipajes NUMBER;
+    v_limite_equipajes CONSTANT NUMBER := 2; -- Límite de equipajes por pasajero
+BEGIN
+    -- Contar los equipajes ya registrados para el pasajero en la misma reserva
+    SELECT COUNT(*)
+    INTO v_numero_equipajes
+    FROM RESERVA
+    WHERE id_pasajero_res = :NEW.id_pasajero_res;
+
+    -- Verificar si se excede el límite de equipajes
+    IF v_numero_equipajes >= v_limite_equipajes THEN
+        RAISE_APPLICATION_ERROR(-20006, 'El pasajero ha excedido el límite permitido de equipajes.');
+    END IF;
+END;
+/
+
+-- Trigger para Validar Disponibilidad de Puertas al Asignar Vuelos
+CREATE OR REPLACE TRIGGER VALIDAR_DISPONIBILIDAD_PUERTA
+BEFORE INSERT OR UPDATE ON VUELO
+FOR EACH ROW
+DECLARE
+    v_puerta_ocupada NUMBER;
+BEGIN
+    -- Comprobar si la puerta ya está asignada a otro vuelo en el mismo intervalo de tiempo
+    SELECT COUNT(*)
+    INTO v_puerta_ocupada
+    FROM VUELO
+    WHERE id_aeropuerto_destino = :NEW.id_aeropuerto_destino
+      AND fecha_hora_salida < :NEW.fecha_hora_llegada
+      AND fecha_hora_llegada > :NEW.fecha_hora_salida
+      AND id_vuelo != :NEW.id_vuelo;
+
+    -- Si se encuentra un vuelo que ocupa la misma puerta en el mismo periodo, lanzar un error
+    IF v_puerta_ocupada > 0 THEN
+        RAISE_APPLICATION_ERROR(-20007, 'La puerta seleccionada ya está ocupada por otro vuelo en este intervalo de tiempo.');
+    END IF;
+END;
+/
+
+-- Trigger para Actualizar el Estado del Vuelo Basado en el Tiempo
+CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO_TIEMPO
+AFTER INSERT OR UPDATE ON VUELO
+FOR EACH ROW
+BEGIN
+    -- Cambia el estado a "En vuelo" si la fecha de salida ya pasó y la fecha de llegada aún no ha ocurrido
+    IF :NEW.fecha_hora_salida <= SYSDATE AND :NEW.fecha_hora_llegada > SYSDATE THEN
+        UPDATE VUELO
+        SET estado = 'En vuelo'
+        WHERE id_vuelo = :NEW.id_vuelo;
+    -- Cambia el estado a "Aterrizado" si la fecha de llegada ya ocurrió
+    ELSIF :NEW.fecha_hora_llegada <= SYSDATE THEN
+        UPDATE VUELO
+        SET estado = 'Aterrizado'
+        WHERE id_vuelo = :NEW.id_vuelo;
+    -- Cambia el estado a "Programado" si el vuelo aún no ha despegado
+    ELSE
+        UPDATE VUELO
+        SET estado = 'Programado'
+        WHERE id_vuelo = :NEW.id_vuelo;
+    END IF;
+END;
+/
 
 -- Trigger para verificar la duración del vuelo
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_DURACION
