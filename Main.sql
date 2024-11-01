@@ -154,7 +154,8 @@ CREATE TABLE VUELO (
     CONSTRAINT FK_VUELO_AVION FOREIGN KEY (id_avion) REFERENCES AVION(id_avion) ON DELETE CASCADE
 );
 
--- Tabla RESERVA (restricción de unicidad en id_pasajero e id_vuelo)
+
+-- Tabla RESERVA (con una única restricción de unicidad en id_pasajero e id_vuelo)
 CREATE TABLE RESERVA (
     id_reserva NUMBER NOT NULL,
     id_pasajero NUMBER NOT NULL,
@@ -171,14 +172,14 @@ CREATE TABLE RESERVA (
     CONSTRAINT FK_RESERVA_PASAJERO FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
     CONSTRAINT FK_RESERVA_VUELO FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
     CONSTRAINT FK_RESERVA_ASIENTO FOREIGN KEY (id_asiento) REFERENCES ASIENTO(id_asiento) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_EQUIPAJE FOREIGN KEY (id_equipaje) REFERENCES EQUIPAJE(id_equipaje) ON DELETE CASCADE,
     CONSTRAINT FK_RESERVA_AEROPUERTO FOREIGN KEY (id_aeropuerto) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE
 );
 
--- Tabla CHECK_IN
+
+-- Tabla CHECK_IN - Relación 1 a 1 con RESERVA
 CREATE TABLE CHECK_IN (
     id_check_in NUMBER NOT NULL,
-    id_reserva NUMBER NOT NULL,
+    id_reserva NUMBER NOT NULL UNIQUE, -- Relación 1 a 1
     fecha_hora_check_in TIMESTAMP NOT NULL,
     estado VARCHAR2(20) CHECK (estado IN ('Completado', 'Cancelado', 'Pendiente')),
     tipo_check_in VARCHAR2(20) CHECK (tipo_check_in IN ('Presencial', 'Online')),
@@ -186,13 +187,14 @@ CREATE TABLE CHECK_IN (
     CONSTRAINT FK_CHECK_IN_RESERVA FOREIGN KEY (id_reserva) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE
 );
 
--- Tabla DOCUMENTO_EMBARQUE
+
+-- Tabla DOCUMENTO_EMBARQUE - Relación 1 a 1 con CHECK_IN
 CREATE TABLE DOCUMENTO_EMBARQUE (
     id_documento NUMBER NOT NULL,
-    id_check_in NUMBER NOT NULL,  -- Relación con check-in completado
-    id_pasajero NUMBER NOT NULL,  -- Relación con el pasajero
-    id_vuelo NUMBER NOT NULL,     -- Relación con vuelo
-    id_asiento NUMBER NOT NULL,   -- Relación con asiento asignado
+    id_check_in NUMBER NOT NULL UNIQUE,  -- Relación 1 a 1
+    id_pasajero NUMBER NOT NULL,         -- Relación directa con el pasajero
+    id_vuelo NUMBER NOT NULL,            -- Relación con vuelo
+    id_asiento NUMBER NOT NULL,          -- Relación con asiento asignado
     nombre_pasajero VARCHAR2(100) NOT NULL,
     apellido_pasajero VARCHAR2(100) NOT NULL,
     numero_vuelo VARCHAR2(20) NOT NULL,
