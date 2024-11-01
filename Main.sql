@@ -250,16 +250,19 @@ END;
 
 -- Trigger para limitar el número de equipajes por pasajero
 CREATE OR REPLACE TRIGGER LIMITE_EQUIPAJES_POR_PASAJERO
-BEFORE INSERT ON RESERVA
+BEFORE INSERT ON EQUIPAJE
 FOR EACH ROW
 DECLARE
     v_numero_equipajes NUMBER;
-    v_limite_equipajes CONSTANT NUMBER := 2;
+    v_limite_equipajes CONSTANT NUMBER := 2; -- Límite de equipajes por pasajero
 BEGIN
+    -- Contar los equipajes ya registrados para el pasajero
     SELECT COUNT(*)
     INTO v_numero_equipajes
-    FROM RESERVA
+    FROM EQUIPAJE
     WHERE id_pasajero = :NEW.id_pasajero;
+
+    -- Verificar si se excede el límite de equipajes
     IF v_numero_equipajes > v_limite_equipajes THEN
         RAISE_APPLICATION_ERROR(-20006, 'El pasajero ha excedido el límite permitido de equipajes.');
     END IF;
@@ -539,33 +542,23 @@ END;
 -- ======================
 
 -- Procedimiento para realizar el check-in de un pasajero
-
 CREATE OR REPLACE PROCEDURE proc_realizar_check_in (
-    p_identificador_compra NUMBER,
+    p_id_reserva NUMBER,
     p_documento_identidad VARCHAR2,
-    p_id_vuelo NUMBER,
     p_id_asiento NUMBER,
     p_peso_equipaje NUMBER
 ) IS
     v_id_pasajero NUMBER;
     v_documento_valido BOOLEAN := FALSE;
+    v_nuevo_id_check_in NUMBER;
 BEGIN
-    -- Verificación del documento de identidad o número de compra
-    IF p_identificador_compra IS NOT NULL THEN
-        SELECT id_pasajero_comp
-        INTO v_id_pasajero
-        FROM COMPRA
-        WHERE id_compra = p_identificador_compra;
-    ELSIF p_documento_identidad IS NOT NULL THEN
-        SELECT id_pasajero
-        INTO v_id_pasajero
-        FROM PASAJERO
-        WHERE documento_identidad = p_documento_identidad;
-    ELSE
-        RAISE_APPLICATION_ERROR(-20003, 'Se debe proporcionar un número de compra o un documento de identidad.');
-    END IF;
+    -- Verificación del ID de reserva
+    SELECT id_pasajero
+    INTO v_id_pasajero
+    FROM RESERVA
+    WHERE id_reserva = p_id_reserva;
 
-    -- Validación de formato del documento de identidad (RUN o pasaporte)
+    -- Validación del formato del documento de identidad (RUN o pasaporte)
     IF p_documento_identidad IS NOT NULL THEN
         IF REGEXP_LIKE (p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$') OR REGEXP_LIKE (p_documento_identidad, '^[A-Za-z]{1}[0-9]{5,9}$') THEN 
             v_documento_valido := TRUE;
@@ -579,8 +572,7 @@ BEGIN
         SELECT 1
         INTO v_id_pasajero
         FROM ASIENTO
-        WHERE id_asiento = p_id_asiento 
-        AND id_vuelo = p_id_vuelo 
+        WHERE id_asiento = p_id_asiento
         AND estado = 'Disponible';
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
@@ -592,11 +584,14 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20004, 'El peso del equipaje excede el límite permitido. Por favor, pague una multa o reduzca el peso.');
     END IF;
 
+    -- Obtener un nuevo ID para CHECK_IN
+    SELECT NVL(MAX(id_check_in), 0) + 1 INTO v_nuevo_id_check_in FROM CHECK_IN;
+
     -- Inserción en la tabla de CHECK_IN
     INSERT INTO CHECK_IN (
-        id_check_in, id_pasajero_check, id_vuelo_check, fecha_check_in, estado, tipo_check_in
+        id_check_in, id_reserva, fecha_hora_check_in, estado, tipo_check_in
     ) VALUES (
-        SEQ_CHECK_IN.NEXTVAL, v_id_pasajero, p_id_vuelo, SYSDATE, 'Completado', 
+        v_nuevo_id_check_in, p_id_reserva, SYSDATE, 'Completado', 
         CASE 
             WHEN p_documento_identidad IS NOT NULL THEN 'Presencial' 
             ELSE 'Online' 
@@ -606,12 +601,12 @@ BEGIN
     -- Actualización del estado del asiento a 'No disponible'
     UPDATE ASIENTO
     SET estado = 'No disponible'
-    WHERE id_asiento = p_id_asiento AND id_vuelo = p_id_vuelo;
+    WHERE id_asiento = p_id_asiento;
 
     COMMIT;
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20005, 'Pasajero o compra no encontrada.');
+        RAISE_APPLICATION_ERROR(-20005, 'Pasajero o reserva no encontrada.');
     WHEN OTHERS THEN
         ROLLBACK;
         RAISE;
@@ -626,7 +621,7 @@ CREATE OR REPLACE PROCEDURE asignar_asiento_disponible (
     v_id_asiento NUMBER;
 BEGIN
     -- Obtener el ID del vuelo de la reserva
-    SELECT id_vuelo_res
+    SELECT id_vuelo
     INTO v_id_vuelo
     FROM RESERVA
     WHERE id_reserva = p_id_reserva;
@@ -636,15 +631,7 @@ BEGIN
     INTO v_id_asiento
     FROM ASIENTO
     WHERE estado = 'Disponible'
-      AND id_asiento IN (
-          SELECT id_asiento
-          FROM ASIENTO
-          WHERE id_asiento NOT IN (
-              SELECT id_asiento
-              FROM RESERVA
-              WHERE id_vuelo_res = v_id_vuelo
-          )
-      )
+      AND id_avion = (SELECT id_avion FROM VUELO WHERE id_vuelo = v_id_vuelo)
       AND ROWNUM = 1;  -- Toma el primer asiento disponible
 
     -- Actualizar la reserva con el asiento asignado
@@ -658,7 +645,6 @@ BEGIN
     WHERE id_asiento = v_id_asiento;
 
     COMMIT;
-
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
         RAISE_APPLICATION_ERROR(-20014, 'No hay asientos disponibles para este vuelo.');
@@ -667,7 +653,6 @@ EXCEPTION
         RAISE;
 END;
 /
-
 
 -- Procedimiento para notificar a los pasajeros de un cambio de puerta de embarque
 CREATE OR REPLACE PROCEDURE notificar_cambio_puerta (
@@ -679,11 +664,12 @@ CREATE OR REPLACE PROCEDURE notificar_cambio_puerta (
     v_puerta NUMBER;
 BEGIN
     -- Obtener los datos del pasajero y la nueva puerta de embarque del vuelo
-    SELECT p.nombre, p.telefono_pasajero, v.id_puerta
+    SELECT p.nombre, p.telefono_pasajero, pt.id_puerta
     INTO v_nombre, v_telefono_pasajero, v_puerta
     FROM PASAJERO p
-    JOIN RESERVA r ON p.id_pasajero = r.id_pasajero_res
-    JOIN VUELO v ON r.id_vuelo_res = v.id_vuelo
+    JOIN RESERVA r ON p.id_pasajero = r.id_pasajero
+    JOIN VUELO v ON r.id_vuelo = v.id_vuelo
+    JOIN PUERTA pt ON pt.id_terminal = (SELECT id_terminal FROM TERMINAL_AEROPUERTO WHERE id_aeropuerto = v.id_aeropuerto_destino)
     WHERE v.id_vuelo = p_id_vuelo
       AND p.id_pasajero = p_id_pasajero;
 
@@ -692,7 +678,6 @@ BEGIN
         'Estimado ' || v_nombre || ', su puerta de embarque ha sido cambiada a la puerta ' || v_puerta || '. Gracias.');
 END;
 /
-
 
 -- Procedimiento para informar sobre el retraso de un vuelo
 CREATE OR REPLACE PROCEDURE notificar_retraso_vuelo (
@@ -712,5 +697,182 @@ BEGIN
     -- Simulación de notificación al pasajero sobre el retraso del vuelo
     RAISE_APPLICATION_ERROR(-20016,
         'Estimado ' || v_nombre || ', su vuelo ha sido retrasado. La nueva hora de salida es ' || TO_CHAR(p_nueva_hora_salida, 'DD-MM-YYYY HH24:MI') || '. Gracias.');
+END;
+/
+
+-- Procedimiento para Cancelar una Reserva
+CREATE OR REPLACE PROCEDURE cancelar_reserva (
+    p_id_reserva NUMBER
+) IS
+BEGIN
+    -- Actualizar el estado de la reserva a 'Cancelado'
+    UPDATE RESERVA
+    SET estado = 'Cancelado'
+    WHERE id_reserva = p_id_reserva;
+
+    COMMIT;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20017, 'Reserva no encontrada.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+
+-- Procedimiento para Actualizar Estado de Asientos en Base al Estado de Vuelo
+CREATE OR REPLACE PROCEDURE actualizar_estado_vuelo (
+    p_id_vuelo NUMBER,
+    p_nuevo_estado VARCHAR2
+) IS
+BEGIN
+    UPDATE VUELO
+    SET estado = p_nuevo_estado
+    WHERE id_vuelo = p_id_vuelo;
+
+    COMMIT;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20020, 'Vuelo no encontrado.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+-- Procedimiento para Asignar Equipaje a un Pasajero
+CREATE OR REPLACE PROCEDURE asignar_equipaje_a_pasajero (
+    p_id_pasajero NUMBER,
+    p_tipo_equipaje VARCHAR2,
+    p_peso NUMBER,
+    p_alto NUMBER,
+    p_ancho NUMBER,
+    p_profundidad NUMBER
+) IS
+BEGIN
+    -- Insertar el nuevo equipaje para el pasajero especificado
+    INSERT INTO EQUIPAJE (
+        id_equipaje, id_pasajero, tipo_equipaje, peso, alto, ancho, profundidad, cobro_extra
+    ) VALUES (
+        (SELECT NVL(MAX(id_equipaje), 0) + 1 FROM EQUIPAJE),  -- Generar un nuevo ID para el equipaje
+        p_id_pasajero,
+        p_tipo_equipaje,
+        p_peso,
+        p_alto,
+        p_ancho,
+        p_profundidad,
+        0  -- El trigger de validación de tamaño y peso actualizará el cobro_extra si es necesario
+    );
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+-- Procedimiento Para Registrar Equipaje Extra con Cobro Adicional
+CREATE OR REPLACE PROCEDURE registrar_equipaje_extra (
+    p_id_pasajero NUMBER,
+    p_tipo_equipaje VARCHAR2,
+    p_peso NUMBER,
+    p_alto NUMBER,
+    p_ancho NUMBER,
+    p_profundidad NUMBER
+) IS
+BEGIN
+    -- Registrar el equipaje sin necesidad de cálculos adicionales
+    INSERT INTO EQUIPAJE (
+        id_equipaje, id_pasajero, tipo_equipaje, peso, alto, ancho, profundidad
+    ) VALUES (
+        (SELECT NVL(MAX(id_equipaje), 0) + 1 FROM EQUIPAJE), p_id_pasajero, p_tipo_equipaje, p_peso, p_alto, p_ancho, p_profundidad
+    );
+
+    COMMIT;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20021, 'Pasajero no encontrado.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+--Procedimiento para Generar Informe de Vuelos de un Pasajero
+CREATE OR REPLACE PROCEDURE generar_informe_vuelos_pasajero (
+    p_id_pasajero NUMBER
+) IS
+    CURSOR c_vuelos IS
+        SELECT v.id_vuelo, a.nombre_aerolinea, v.fecha_hora_salida, v.fecha_hora_llegada, d.nombre AS destino
+        FROM VUELO v
+        JOIN RESERVA r ON v.id_vuelo = r.id_vuelo
+        JOIN AEROLINEA a ON v.id_aerolinea = a.id_aerolinea
+        JOIN AEROPUERTO ap_dest ON v.id_aeropuerto_destino = ap_dest.id_aeropuerto
+        JOIN CIUDAD d ON ap_dest.id_ciudad = d.id_ciudad
+        WHERE r.id_pasajero = p_id_pasajero
+        AND v.estado IN ('Programado', 'En vuelo');
+BEGIN
+    FOR vuelo_rec IN c_vuelos LOOP
+        DBMS_OUTPUT.PUT_LINE('Vuelo ID: ' || vuelo_rec.id_vuelo);
+        DBMS_OUTPUT.PUT_LINE('Aerolínea: ' || vuelo_rec.nombre_aerolinea);
+        DBMS_OUTPUT.PUT_LINE('Salida: ' || TO_CHAR(vuelo_rec.fecha_hora_salida, 'DD-MM-YYYY HH24:MI'));
+        DBMS_OUTPUT.PUT_LINE('Llegada: ' || TO_CHAR(vuelo_rec.fecha_hora_llegada, 'DD-MM-YYYY HH24:MI'));
+        DBMS_OUTPUT.PUT_LINE('Destino: ' || vuelo_rec.destino);
+        DBMS_OUTPUT.PUT_LINE('-----------------------');
+    END LOOP;
+END;
+/
+
+-- Procedimiento Completo para Obtener el Boleto de Abordaje
+CREATE OR REPLACE PROCEDURE obtener_boleto_abordaje (
+    p_id_check_in NUMBER
+) IS
+    v_id_documento NUMBER;
+    v_nombre_pasajero VARCHAR2(100);
+    v_apellido_pasajero VARCHAR2(100);
+    v_numero_vuelo VARCHAR2(20);
+    v_aerolinea VARCHAR2(100);
+    v_origen VARCHAR2(100);
+    v_destino VARCHAR2(100);
+    v_fecha_salida TIMESTAMP;
+    v_fecha_llegada TIMESTAMP;
+    v_terminal NUMBER;
+    v_puerta NUMBER;
+    v_asiento VARCHAR2(10);
+    v_tipo_boleto VARCHAR2(50);
+    v_clase_servicio VARCHAR2(50);
+    v_fecha_emision TIMESTAMP;
+BEGIN
+    -- Obtener los datos del boleto de abordaje y detalles adicionales del vuelo y pasajero
+    SELECT id_documento, nombre_pasajero, apellido_pasajero, numero_vuelo,
+           aerolinea, origen, destino, fecha_salida, fecha_llegada, 
+           id_terminal, id_puerta, asiento, tipo_boleto, fecha_hora
+    INTO v_id_documento, v_nombre_pasajero, v_apellido_pasajero, v_numero_vuelo,
+         v_aerolinea, v_origen, v_destino, v_fecha_salida, v_fecha_llegada, 
+         v_terminal, v_puerta, v_asiento, v_tipo_boleto, v_fecha_emision
+    FROM DOCUMENTO_EMBARQUE
+    WHERE id_check_in = p_id_check_in;
+
+    -- Mostrar la información del boleto de abordaje
+    DBMS_OUTPUT.PUT_LINE('--- TICKET DE ABORDAJE ---');
+    DBMS_OUTPUT.PUT_LINE('Documento ID: ' || v_id_documento);
+    DBMS_OUTPUT.PUT_LINE('Pasajero: ' || v_nombre_pasajero || ' ' || v_apellido_pasajero);
+    DBMS_OUTPUT.PUT_LINE('Vuelo: ' || v_numero_vuelo || ' - ' || v_aerolinea);
+    DBMS_OUTPUT.PUT_LINE('Origen: ' || v_origen || ' - Destino: ' || v_destino);
+    DBMS_OUTPUT.PUT_LINE('Fecha de Salida: ' || TO_CHAR(v_fecha_salida, 'DD-MM-YYYY HH24:MI'));
+    DBMS_OUTPUT.PUT_LINE('Fecha de Llegada: ' || TO_CHAR(v_fecha_llegada, 'DD-MM-YYYY HH24:MI'));
+    DBMS_OUTPUT.PUT_LINE('Terminal: ' || v_terminal || ' - Puerta: ' || v_puerta);
+    DBMS_OUTPUT.PUT_LINE('Asiento: ' || v_asiento);
+    DBMS_OUTPUT.PUT_LINE('Clase de Servicio: ' || v_tipo_boleto);
+    DBMS_OUTPUT.PUT_LINE('Fecha de Emisión: ' || TO_CHAR(v_fecha_emision, 'DD-MM-YYYY HH24:MI'));
+    DBMS_OUTPUT.PUT_LINE('--------------------------');
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20025, 'No se encontró el documento de abordaje para el check-in proporcionado.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
 END;
 /
