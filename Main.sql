@@ -220,49 +220,65 @@ CREATE TABLE DOCUMENTO_EMBARQUE (
 ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'DD-MM-YYYY HH24:MI:SS';
 
 
---Trigger para Validar el Tamaño del Equipaje y hacer un cobro extra 
+-- ======================
+-- 1. Validación de Equipaje
+-- ======================
+
+-- Trigger para validar el tamaño y peso del equipaje y aplicar un cobro extra
 CREATE OR REPLACE TRIGGER VALIDAR_TAMANO_PESO_Y_COBRO_EQUIPAJE
 BEFORE INSERT OR UPDATE ON EQUIPAJE
 FOR EACH ROW
 BEGIN
-    -- Inicializar el cobro extra en 0
     :NEW.cobro_extra := 0;
-
-    -- Validaciones según el tipo de equipaje
     IF :NEW.tipo_equipaje = 'Mano' THEN
-        -- Validación de tamaño y peso para equipaje de mano
         IF :NEW.alto > 55 OR :NEW.ancho > 35 OR :NEW.profundidad > 25 THEN
-            :NEW.cobro_extra := 22000; -- Cobro extra por exceso de tamaño
+            :NEW.cobro_extra := 22000;
         END IF;
         IF :NEW.peso > 10 THEN
-            :NEW.cobro_extra := :NEW.cobro_extra + 25000; -- Cobro extra por exceso de peso
+            :NEW.cobro_extra := :NEW.cobro_extra + 25000;
         END IF;
     ELSIF :NEW.tipo_equipaje = 'De Bodega' THEN
-        -- Validación de tamaño y peso para equipaje de bodega
         IF :NEW.alto > 80 OR :NEW.ancho > 50 OR :NEW.profundidad > 30 THEN
-            :NEW.cobro_extra := 45000; -- Cobro extra por exceso de tamaño
+            :NEW.cobro_extra := 45000;
         END IF;
         IF :NEW.peso > 23 THEN
-            :NEW.cobro_extra := :NEW.cobro_extra + 50000; -- Cobro extra por exceso de peso
+            :NEW.cobro_extra := :NEW.cobro_extra + 50000;
         END IF;
     END IF;
 END;
 /
 
+-- Trigger para limitar el número de equipajes por pasajero
+CREATE OR REPLACE TRIGGER LIMITE_EQUIPAJES_POR_PASAJERO
+BEFORE INSERT ON RESERVA
+FOR EACH ROW
+DECLARE
+    v_numero_equipajes NUMBER;
+    v_limite_equipajes CONSTANT NUMBER := 2;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_numero_equipajes
+    FROM RESERVA
+    WHERE id_pasajero = :NEW.id_pasajero;
+    IF v_numero_equipajes > v_limite_equipajes THEN
+        RAISE_APPLICATION_ERROR(-20006, 'El pasajero ha excedido el límite permitido de equipajes.');
+    END IF;
+END;
+/
 
---Trigger para Verificar la Edad Mínima a un Vuelo sin asistente o acompañante
+-- ======================
+-- 2. Verificación de Documentos y Asistencia
+-- ======================
+
+-- Trigger para verificar y actualizar asistencia para pasajeros menores de edad
 CREATE OR REPLACE TRIGGER VERIFICAR_Y_ACTUALIZAR_ASISTENCIA_MENOR_EDAD
 BEFORE INSERT OR UPDATE ON PASAJERO
 FOR EACH ROW
 BEGIN
-    -- Verificar si el pasajero es menor de 18 años
     IF :NEW.edad < 18 THEN
-        -- Si el campo asistencia está en 'No' o es NULL, cambiarlo a 'Sí'
         IF :NEW.asistencia IS NULL OR :NEW.asistencia = 'No' THEN
             :NEW.asistencia := 'Sí';
         END IF;
-        
-        -- Si alguien intenta cambiar asistencia a 'No', lanzar un error
         IF :NEW.asistencia = 'No' THEN
             RAISE_APPLICATION_ERROR(-20008, 'El pasajero es menor de edad y requiere un asistente o acompañante para volar.');
         END IF;
@@ -270,8 +286,7 @@ BEGIN
 END;
 /
 
-
--- Trigger para verificar visa
+-- Trigger para verificar la visa según el país de destino
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_VISA
 BEFORE INSERT ON RESERVA
 FOR EACH ROW
@@ -285,16 +300,14 @@ BEGIN
     JOIN CIUDAD c ON c.id_pais = p.id_pais
     JOIN AEROPUERTO a ON a.id_ciudad = c.id_ciudad
     JOIN VUELO v ON v.id_aeropuerto_destino = a.id_aeropuerto
-    WHERE v.id_vuelo = :NEW.id_vuelo_res;
-
-    -- Verifica si la visa es requerida sin tipo de visa especificado
+    WHERE v.id_vuelo = :NEW.id_vuelo;
     IF v_visa_requerida = 'Sí' AND v_tipo_visa IS NULL THEN
         RAISE_APPLICATION_ERROR(-20002, 'El país de destino requiere especificar el tipo de visa para el pasajero.');
     END IF;
 END;
 /
 
--- Trigger para verificar pasaporte
+-- Trigger para verificar el pasaporte según el país de destino
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_PASAPORTE
 BEFORE INSERT ON RESERVA
 FOR EACH ROW
@@ -302,112 +315,40 @@ DECLARE
     v_pasaporte_requerido VARCHAR2(20);
     v_pasaporte_pasajero VARCHAR2(20);
 BEGIN
-    -- Selección de si el país de destino del vuelo requiere pasaporte
     SELECT p.pasaporte_requerido
     INTO v_pasaporte_requerido
     FROM PAIS p
     JOIN CIUDAD c ON c.id_pais = p.id_pais
     JOIN AEROPUERTO a ON a.id_ciudad = c.id_ciudad
     JOIN VUELO v ON v.id_aeropuerto_destino = a.id_aeropuerto
-    WHERE v.id_vuelo = :NEW.id_vuelo_res;
-
-    -- Verificación de que el pasajero tiene pasaporte si es necesario
+    WHERE v.id_vuelo = :NEW.id_vuelo;
     SELECT documento_identidad
     INTO v_pasaporte_pasajero
     FROM PASAJERO
-    WHERE id_pasajero = :NEW.id_pasajero_res;
-
+    WHERE id_pasajero = :NEW.id_pasajero;
     IF v_pasaporte_requerido = 'Sí' AND v_pasaporte_pasajero = 'No' THEN
         RAISE_APPLICATION_ERROR(-20003, 'El país de destino requiere que el pasajero tenga pasaporte.');
     END IF;
 END;
-
-
---  Trigger para Actualizar el Estado del Asiento Cuando un Pasajero Hace Check-In
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_ASIENTO_CHECK_IN
-AFTER INSERT ON CHECK_IN
-FOR EACH ROW
-BEGIN
-    UPDATE ASIENTO
-    SET estado = 'No disponible'
-    WHERE id_asiento = :NEW.id_asiento;
-END;
 /
 
---  Trigger para Limitar el Número de Equipajes por Pasajero
-CREATE OR REPLACE TRIGGER LIMITE_EQUIPAJES_POR_PASAJERO
-BEFORE INSERT ON RESERVA
-FOR EACH ROW
-DECLARE
-    v_numero_equipajes NUMBER;
-    v_limite_equipajes CONSTANT NUMBER := 2; -- Límite de equipajes por pasajero
-BEGIN
-    -- Contar los equipajes ya registrados para el pasajero en la misma reserva
-    SELECT COUNT(*)
-    INTO v_numero_equipajes
-    FROM RESERVA
-    WHERE id_pasajero_res = :NEW.id_pasajero_res;
+-- ======================
+-- 3. Gestión de Estado de Vuelos
+-- ======================
 
-    -- Verificar si se excede el límite de equipajes
-    IF v_numero_equipajes > v_limite_equipajes THEN
-        RAISE_APPLICATION_ERROR(-20006, 'El pasajero ha excedido el límite permitido de equipajes.');
-    END IF;
-END;
-/
-
---Trigger para Restringir Actualización de Fecha de Vuelo si Faltan Menos de 24 Horas
-CREATE OR REPLACE TRIGGER RESTRINGIR_ACTUALIZACION_FECHA_VUELO
-BEFORE UPDATE OF fecha_hora_salida ON VUELO
-FOR EACH ROW
-BEGIN
-    -- Verificar si faltan menos de 24 horas para la salida del vuelo
-    IF :OLD.fecha_hora_salida - INTERVAL '1' DAY < SYSDATE THEN
-        -- Restringir la actualización y mostrar un mensaje de error
-        RAISE_APPLICATION_ERROR(-20013, 'No se permite actualizar la fecha de salida ya que faltan menos de 24 horas para el vuelo.');
-    END IF;
-END;
-/
-
-
--- Trigger para Validar Disponibilidad de Puertas al Asignar Vuelos
-CREATE OR REPLACE TRIGGER VALIDAR_DISPONIBILIDAD_PUERTA
-BEFORE INSERT OR UPDATE ON VUELO
-FOR EACH ROW
-DECLARE
-    v_puerta_ocupada NUMBER;
-BEGIN
-    -- Comprobar si la puerta ya está asignada a otro vuelo en el mismo intervalo de tiempo
-    SELECT COUNT(*)
-    INTO v_puerta_ocupada
-    FROM VUELO
-    WHERE id_aeropuerto_destino = :NEW.id_aeropuerto_destino
-      AND fecha_hora_salida < :NEW.fecha_hora_llegada
-      AND fecha_hora_llegada > :NEW.fecha_hora_salida
-      AND id_vuelo != :NEW.id_vuelo;
-
-    -- Si se encuentra un vuelo que ocupa la misma puerta en el mismo periodo, lanzar un error
-    IF v_puerta_ocupada > 0 THEN
-        RAISE_APPLICATION_ERROR(-20007, 'La puerta seleccionada ya está ocupada por otro vuelo en este intervalo de tiempo.');
-    END IF;
-END;
-/
-
--- Trigger para Actualizar el Estado del Vuelo Basado en el Tiempo
+-- Trigger para actualizar el estado del vuelo a "En vuelo", "Aterrizado" o "Programado"
 CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO_TIEMPO
 AFTER INSERT OR UPDATE ON VUELO
 FOR EACH ROW
 BEGIN
-    -- Cambia el estado a "En vuelo" si la fecha de salida ya pasó y la fecha de llegada aún no ha ocurrido
     IF :NEW.fecha_hora_salida <= SYSDATE AND :NEW.fecha_hora_llegada > SYSDATE THEN
         UPDATE VUELO
         SET estado = 'En vuelo'
         WHERE id_vuelo = :NEW.id_vuelo;
-    -- Cambia el estado a "Aterrizado" si la fecha de llegada ya ocurrió
     ELSIF :NEW.fecha_hora_llegada <= SYSDATE THEN
         UPDATE VUELO
         SET estado = 'Aterrizado'
         WHERE id_vuelo = :NEW.id_vuelo;
-    -- Cambia el estado a "Programado" si el vuelo aún no ha despegado
     ELSE
         UPDATE VUELO
         SET estado = 'Programado'
@@ -416,17 +357,16 @@ BEGIN
 END;
 /
 
--- Trigger para verificar la duración del vuelo
+-- Trigger para actualizar la duración del vuelo automáticamente
 CREATE OR REPLACE TRIGGER TRG_VERIFICAR_DURACION
 BEFORE INSERT OR UPDATE ON VUELO
 FOR EACH ROW
 BEGIN
-    :NEW.duracion := (:NEW.fecha_llegada - :NEW.fecha_salida) * 24*60;
+    :NEW.duracion := (:NEW.fecha_hora_llegada - :NEW.fecha_hora_salida) * 24*60;
 END;
 /
 
--- Trigger para actualizar el estado de vuelo cancelado
-
+-- Trigger para actualizar el estado del vuelo a "Cancelado" si una reserva es cancelada
 CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO_CANCELADO
 AFTER UPDATE ON RESERVA
 FOR EACH ROW
@@ -434,49 +374,75 @@ BEGIN
     IF (:NEW.estado = 'Cancelado') THEN
         UPDATE VUELO
         SET estado = 'Cancelado' 
-        WHERE id_vuelo = :NEW.id_vuelo_res;
+        WHERE id_vuelo = :NEW.id_vuelo;
     END IF;
 END;
+/
 
--- Trigger para actualizar el estado de vuelo despegado y aterrizado
-
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO
-AFTER INSERT OR UPDATE ON VUELO
+-- Trigger para restringir la actualización de la fecha de salida de un vuelo si faltan menos de 24 horas
+CREATE OR REPLACE TRIGGER RESTRINGIR_ACTUALIZACION_FECHA_VUELO
+BEFORE UPDATE OF fecha_hora_salida ON VUELO
 FOR EACH ROW
 BEGIN
-    IF (:NEW.fecha_salida < SYSDATE AND :NEW.fecha_llegada > SYSDATE) THEN
-        UPDATE VUELO
-        SET estado = 'En vuelo' 
-        WHERE id_vuelo = :NEW.id_vuelo;
-    ELSIF (:NEW.fecha_llegada <= SYSDATE) THEN
-        UPDATE VUELO
-        SET estado = 'Aterrizado' 
-        WHERE id_vuelo = :NEW.id_vuelo;
+    IF :OLD.fecha_hora_salida - INTERVAL '1' DAY < SYSDATE THEN
+        RAISE_APPLICATION_ERROR(-20013, 'No se permite actualizar la fecha de salida ya que faltan menos de 24 horas para el vuelo.');
     END IF;
 END;
+/
 
--- Trigger para actualizar el estado de vuelo despegado y aterrizado
+-- ======================
+-- 4. Gestión de Asientos y Puertas
+-- ======================
+
+-- Trigger para verificar la disponibilidad de puertas al asignar vuelos
+CREATE OR REPLACE TRIGGER VALIDAR_DISPONIBILIDAD_PUERTA
+BEFORE INSERT OR UPDATE ON VUELO
+FOR EACH ROW
+DECLARE
+    v_puerta_ocupada NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_puerta_ocupada
+    FROM VUELO
+    WHERE id_aeropuerto_destino = :NEW.id_aeropuerto_destino
+      AND fecha_hora_salida < :NEW.fecha_hora_llegada
+      AND fecha_hora_llegada > :NEW.fecha_hora_salida
+      AND id_vuelo != :NEW.id_vuelo;
+    IF v_puerta_ocupada > 0 THEN
+        RAISE_APPLICATION_ERROR(-20007, 'La puerta seleccionada ya está ocupada por otro vuelo en este intervalo de tiempo.');
+    END IF;
+END;
+/
+
+-- Trigger para actualizar el estado del asiento al hacer check-in
+CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_ASIENTO_CHECK_IN
+AFTER INSERT ON CHECK_IN
+FOR EACH ROW
+BEGIN
+    UPDATE ASIENTO
+    SET estado = 'No disponible'
+    WHERE id_asiento = (SELECT id_asiento FROM RESERVA WHERE id_reserva = :NEW.id_reserva);
+END;
+/
+
+-- Trigger para liberar el estado del asiento al finalizar el vuelo
 CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_ASIENTO_FIN_VUELO
 AFTER UPDATE OF estado ON VUELO
 FOR EACH ROW
 BEGIN
-    -- Verificar si el estado del vuelo ha cambiado a "Aterrizado"
     IF :NEW.estado = 'Aterrizado' THEN
-        -- Actualizar los asientos del vuelo para que estén disponibles
         UPDATE ASIENTO
         SET estado = 'Disponible'
         WHERE id_asiento IN (
             SELECT id_asiento
             FROM RESERVA
-            WHERE id_vuelo_res = :NEW.id_vuelo
+            WHERE id_vuelo = :NEW.id_vuelo
         );
     END IF;
 END;
 /
 
-
 -- Trigger para liberar y eliminar asientos al cancelar una reserva
-
 CREATE OR REPLACE TRIGGER LIBERAR_ASIENTOS_RESERVA
 AFTER DELETE ON RESERVA
 FOR EACH ROW
@@ -485,10 +451,13 @@ BEGIN
     SET estado = 'Disponible'
     WHERE id_asiento = :OLD.id_asiento;
 END;
+/
 
+-- ======================
+-- 5. Gestión de Estado de Reservas
+-- ======================
 
--- Trigger para Actualizar el estado de la reserva
-
+-- Trigger para actualizar el estado de la reserva automáticamente
 CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_RESERVA
 AFTER INSERT OR UPDATE ON RESERVA
 FOR EACH ROW
@@ -499,6 +468,7 @@ BEGIN
         WHERE id_reserva = :NEW.id_reserva;
     END IF;
 END;
+/
 
 -- Procedimiento para realizar el check-in de un pasajero
 
