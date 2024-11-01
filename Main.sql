@@ -332,6 +332,24 @@ BEGIN
 END;
 /
 
+-- Validación de Identidad en PASAJERO para asegurar unicidad en documento de identidad y correo
+CREATE OR REPLACE TRIGGER VALIDAR_UNICIDAD_PASAJERO
+BEFORE INSERT ON PASAJERO
+FOR EACH ROW
+DECLARE
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM PASAJERO
+    WHERE documento_identidad = :NEW.documento_identidad OR correo_electronico = :NEW.correo_electronico;
+
+    IF v_count > 0 THEN
+        RAISE_APPLICATION_ERROR(-20034, 'Ya existe un pasajero con el mismo documento de identidad o correo.');
+    END IF;
+END;
+/
+
 -- ======================
 -- 3. Gestión de Estado de Vuelos
 -- ======================
@@ -469,6 +487,56 @@ BEGIN
     END IF;
 END;
 /
+
+-- Trigger para controlar disponibilidad de vuelos y asientos en modificaciones de reserva
+CREATE OR REPLACE TRIGGER VALIDAR_MODIFICACION_RESERVA
+BEFORE UPDATE ON RESERVA
+FOR EACH ROW
+DECLARE
+    v_estado_vuelo VARCHAR2(20);
+    v_estado_asiento VARCHAR2(20);
+BEGIN
+    SELECT estado INTO v_estado_vuelo FROM VUELO WHERE id_vuelo = :NEW.id_vuelo;
+    IF v_estado_vuelo != 'Programado' THEN
+        RAISE_APPLICATION_ERROR(-20031, 'Solo se pueden modificar reservas en vuelos programados.');
+    END IF;
+
+    SELECT estado INTO v_estado_asiento FROM ASIENTO WHERE id_asiento = :NEW.id_asiento;
+    IF v_estado_asiento != 'Disponible' THEN
+        RAISE_APPLICATION_ERROR(-20032, 'El asiento seleccionado no está disponible para esta reserva.');
+    END IF;
+END;
+/
+
+--Trigger genera documento de embarque automáticamente tras completar el CHECK_IN.
+CREATE OR REPLACE TRIGGER GENERAR_DOCUMENTO_TRAS_CHECK_IN
+AFTER INSERT ON CHECK_IN
+FOR EACH ROW
+BEGIN
+    INSERT INTO DOCUMENTO_EMBARQUE (
+        id_documento, id_check_in, id_pasajero, id_vuelo, id_asiento, 
+        nombre_pasajero, apellido_pasajero, numero_vuelo, aerolinea, 
+        destino, fecha_salida, id_terminal, id_puerta, asiento, tipo_boleto, fecha_hora
+    )
+    SELECT SEQ_DOCUMENTO_EMBARQUE.NEXTVAL, :NEW.id_check_in, p.id_pasajero, r.id_vuelo, r.id_asiento,
+           p.nombre, p.apellido, v.numero_vuelo, a.nombre_aerolinea, d.nombre,
+           v.fecha_hora_salida, t.id_terminal, g.id_puerta, a.numero_asiento, r.tipo_boleto, SYSDATE
+    FROM PASAJERO p
+    JOIN RESERVA r ON p.id_pasajero = r.id_pasajero
+    JOIN VUELO v ON r.id_vuelo = v.id_vuelo
+    JOIN AEROLINEA a ON v.id_aerolinea = a.id_aerolinea
+    JOIN CIUDAD d ON d.id_ciudad = (SELECT id_ciudad FROM AEROPUERTO WHERE id_aeropuerto = v.id_aeropuerto_destino)
+    JOIN TERMINAL_AEROPUERTO t ON t.id_aeropuerto = v.id_aeropuerto_destino
+    JOIN PUERTA g ON g.id_terminal = t.id_terminal
+    WHERE r.id_reserva = :NEW.id_reserva;
+END;
+/
+
+
+
+-- ======================
+-- Procedimientos
+-- ======================
 
 -- Procedimiento para realizar el check-in de un pasajero
 
