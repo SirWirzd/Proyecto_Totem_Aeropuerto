@@ -19,13 +19,11 @@ DROP TABLE RESERVA CASCADE CONSTRAINTS;
 DROP TABLE VUELO CASCADE CONSTRAINTS;
 DROP TABLE PASAJERO CASCADE CONSTRAINTS;
 DROP TABLE EQUIPAJE CASCADE CONSTRAINTS;
-DROP TABLE ASIENTO CASCADE CONSTRAINTS;
 DROP TABLE AVION CASCADE CONSTRAINTS;
 DROP TABLE AEROLINEA CASCADE CONSTRAINTS;
 DROP TABLE PUERTA CASCADE CONSTRAINTS;
 DROP TABLE TERMINAL_AEROPUERTO CASCADE CONSTRAINTS;
 DROP TABLE AEROPUERTO CASCADE CONSTRAINTS;
-DROP TABLE CIUDAD CASCADE CONSTRAINTS;
 DROP TABLE PAIS CASCADE CONSTRAINTS;
 
 -- Tabla PAIS
@@ -41,22 +39,13 @@ CREATE TABLE PAIS (
     CONSTRAINT chck_pasaporte CHECK (pasaporte_requerido IN ('Sí', 'No'))
 );
 
--- Tabla CIUDAD
-CREATE TABLE CIUDAD (
-    id_ciudad NUMBER NOT NULL,
-    nombre VARCHAR2(100) NOT NULL,
-    id_pais NUMBER NOT NULL,
-    CONSTRAINT PK_CIUDAD PRIMARY KEY (id_ciudad),
-    CONSTRAINT FK_CIUDAD_PAIS FOREIGN KEY (id_pais) REFERENCES PAIS(id_pais) ON DELETE CASCADE
-);
-
 -- Tabla AEROPUERTO
 CREATE TABLE AEROPUERTO (
     id_aeropuerto NUMBER NOT NULL,
     nombre VARCHAR2(100) NOT NULL,
-    id_ciudad NUMBER NOT NULL,
+    pais_id NUMBER NOT NULL,
     CONSTRAINT PK_AEROPUERTO PRIMARY KEY (id_aeropuerto),
-    CONSTRAINT FK_AEROPUERTO_CIUDAD FOREIGN KEY (id_ciudad) REFERENCES CIUDAD(id_ciudad) ON DELETE CASCADE
+    CONSTRAINT FK_AEROPUERTO_CIUDAD FOREIGN KEY (pais_id) REFERENCES PAIS(id_pais) ON DELETE CASCADE
 );
 
 -- Tabla TERMINAL_AEROPUERTO
@@ -93,17 +82,6 @@ CREATE TABLE AVION (
     CONSTRAINT PK_AVION PRIMARY KEY (id_avion),
     CONSTRAINT FK_AVION_AEROLINEA FOREIGN KEY (id_aerolinea) REFERENCES AEROLINEA(id_aerolinea) ON DELETE CASCADE
 );
-
--- Tabla ASIENTO (con referencia al AVION)
-CREATE TABLE ASIENTO (
-    id_asiento NUMBER NOT NULL,
-    id_avion NUMBER NOT NULL,
-    numero_asiento VARCHAR2(10) NOT NULL,
-    estado VARCHAR2(20) DEFAULT 'Disponible' CHECK (estado IN ('Disponible', 'No disponible')),
-    CONSTRAINT PK_ASIENTO PRIMARY KEY (id_asiento),
-    CONSTRAINT FK_ASIENTO_AVION FOREIGN KEY (id_avion) REFERENCES AVION(id_avion) ON DELETE CASCADE
-);
-
 
 -- Tabla PASAJERO
 CREATE TABLE PASAJERO (
@@ -154,67 +132,37 @@ CREATE TABLE VUELO (
     CONSTRAINT FK_VUELO_AVION FOREIGN KEY (id_avion) REFERENCES AVION(id_avion) ON DELETE CASCADE
 );
 
+CREATE OR REPLACE TYPE TIPO_ASIENTO IS VARRAY(5) OF VARCHAR2(10);
 
 -- Tabla RESERVA (con una única restricción de unicidad en id_pasajero e id_vuelo)
 CREATE TABLE RESERVA (
     id_reserva NUMBER NOT NULL,
     id_pasajero NUMBER NOT NULL,
     id_vuelo NUMBER NOT NULL,
-    id_asiento NUMBER NOT NULL,
-    id_equipaje NUMBER NOT NULL,
-    id_aeropuerto NUMBER NOT NULL,
+    asientos TIPO_ASIENTOS, -- VARRAY para los asientos asignados
     fecha_hora_reserva TIMESTAMP NOT NULL,
     motivo_viaje VARCHAR2(100) NOT NULL CHECK (motivo_viaje IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo')),
-    tipo_boleto VARCHAR2(50) CHECK (tipo_boleto IN ('Económico', 'Ejecutivo', 'Primera Clase')),
-    estado VARCHAR2(20) CHECK (estado IN ('Confirmada', 'Cancelado', 'Pendiente')),
+    tipo_boleto VARCHAR2(50) NOT NULL CHECK (tipo_boleto IN ('Económico', 'Ejecutivo', 'Primera Clase')),
+    estado VARCHAR2(20) NOT NULL CHECK (estado IN ('Confirmada', 'Cancelado', 'Pendiente')),
     CONSTRAINT PK_RESERVA PRIMARY KEY (id_reserva),
-    CONSTRAINT UQ_RESERVA_PASAJERO_VUELO UNIQUE (id_pasajero, id_vuelo), -- Unicidad pasajero-vuelo
     CONSTRAINT FK_RESERVA_PASAJERO FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_VUELO FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_ASIENTO FOREIGN KEY (id_asiento) REFERENCES ASIENTO(id_asiento) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_AEROPUERTO FOREIGN KEY (id_aeropuerto) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE
+    CONSTRAINT FK_RESERVA_VUELO FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE
 );
-
 
 -- Tabla CHECK_IN - Relación 1 a 1 con RESERVA
 CREATE TABLE CHECK_IN (
     id_check_in NUMBER NOT NULL,
-    id_reserva NUMBER NOT NULL UNIQUE, -- Relación 1 a 1
+    id_reserva NUMBER NOT NULL UNIQUE,
     fecha_hora_check_in TIMESTAMP NOT NULL,
-    estado VARCHAR2(20) CHECK (estado IN ('Completado', 'Cancelado', 'Pendiente')),
-    tipo_check_in VARCHAR2(20) CHECK (tipo_check_in IN ('Presencial', 'Online')),
+    estado VARCHAR2(20) NOT NULL CHECK (estado IN ('Completado', 'Cancelado', 'Pendiente')),
+    tipo_check_in VARCHAR2(20) NOT NULL CHECK (tipo_check_in IN ('Presencial', 'Online')),
+    numero_asientos TIPO_ASIENTOS, -- Asientos asignados para el check-in
+    numero_vuelo VARCHAR2(20),
+    aerolinea VARCHAR2(100),
+    destino VARCHAR2(100),
     CONSTRAINT PK_CHECK_IN PRIMARY KEY (id_check_in),
     CONSTRAINT FK_CHECK_IN_RESERVA FOREIGN KEY (id_reserva) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE
 );
-
-
--- Tabla DOCUMENTO_EMBARQUE - Relación 1 a 1 con CHECK_IN
-CREATE TABLE DOCUMENTO_EMBARQUE (
-    id_documento NUMBER NOT NULL,
-    id_check_in NUMBER NOT NULL UNIQUE,  -- Relación 1 a 1
-    id_pasajero NUMBER NOT NULL,         -- Relación directa con el pasajero
-    id_vuelo NUMBER NOT NULL,            -- Relación con vuelo
-    id_asiento NUMBER NOT NULL,          -- Relación con asiento asignado
-    nombre_pasajero VARCHAR2(100) NOT NULL,
-    apellido_pasajero VARCHAR2(100) NOT NULL,
-    numero_vuelo VARCHAR2(20) NOT NULL,
-    aerolinea VARCHAR2(100) NOT NULL,
-    destino VARCHAR2(100) NOT NULL,
-    fecha_salida TIMESTAMP NOT NULL,
-    id_terminal NUMBER NOT NULL,
-    id_puerta NUMBER NOT NULL,
-    asiento VARCHAR2(10) NOT NULL,
-    tipo_boleto VARCHAR2(50) NOT NULL CHECK (tipo_boleto IN ('Económico', 'Ejecutivo', 'Primera Clase')),
-    fecha_hora TIMESTAMP NOT NULL,
-    CONSTRAINT PK_DOCUMENTO_EMBARQUE PRIMARY KEY (id_documento),
-    CONSTRAINT FK_DOCUMENTO_EMBARQUE_CHECK_IN FOREIGN KEY (id_check_in) REFERENCES CHECK_IN(id_check_in) ON DELETE CASCADE,
-    CONSTRAINT FK_DOCUMENTO_EMBARQUE_PASAJERO FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
-    CONSTRAINT FK_DOCUMENTO_EMBARQUE_VUELO FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
-    CONSTRAINT FK_DOCUMENTO_EMBARQUE_ASIENTO FOREIGN KEY (id_asiento) REFERENCES ASIENTO(id_asiento) ON DELETE SET NULL,
-    CONSTRAINT FK_DOCUMENTO_EMBARQUE_TERMINAL FOREIGN KEY (id_terminal) REFERENCES TERMINAL_AEROPUERTO(id_terminal) ON DELETE CASCADE,
-    CONSTRAINT FK_DOCUMENTO_EMBARQUE_PUERTA FOREIGN KEY (id_puerta) REFERENCES PUERTA(id_puerta) ON DELETE CASCADE
-);
-
 -- Cambiar formato de la fecha
 
 ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'DD-MM-YYYY HH24:MI:SS';
@@ -414,6 +362,35 @@ END;
 -- ======================
 -- 4. Gestión de Asientos y Puertas
 -- ======================
+
+-- Trigger para validar de asientos 
+-- Trigger para actualizar asientos disponibles en un vuelo tras una reserva
+CREATE OR REPLACE TRIGGER ACTUALIZAR_ASIENTOS_DISPONIBLES
+BEFORE INSERT OR DELETE ON RESERVA
+FOR EACH ROW
+DECLARE
+    v_index NUMBER;
+BEGIN
+    IF INSERTING THEN
+        -- Eliminar el asiento reservado de la lista de asientos disponibles
+        SELECT INSTR(v.asientos_disponibles, :NEW.id_asiento)
+        INTO v_index
+        FROM VUELO v
+        WHERE v.id_vuelo = :NEW.id_vuelo;
+        
+        IF v_index > 0 THEN
+            DELETE FROM TABLE(v.asientos_disponibles) WHERE COLUMN_VALUE = :NEW.id_asiento;
+        END IF;
+    ELSIF DELETING THEN
+        -- Añadir el asiento liberado de nuevo a la lista de asientos disponibles
+        UPDATE VUELO
+        SET asientos_disponibles = asientos_disponibles || :OLD.id_asiento
+        WHERE id_vuelo = :OLD.id_vuelo;
+    END IF;
+END;
+/
+
+
 
 -- Trigger para verificar la disponibilidad de puertas al asignar vuelos
 CREATE OR REPLACE TRIGGER VALIDAR_DISPONIBILIDAD_PUERTA
@@ -866,7 +843,7 @@ BEGIN
     DBMS_OUTPUT.PUT_LINE('Terminal: ' || v_terminal || ' - Puerta: ' || v_puerta);
     DBMS_OUTPUT.PUT_LINE('Asiento: ' || v_asiento);
     DBMS_OUTPUT.PUT_LINE('Clase de Servicio: ' || v_tipo_boleto);
-    DBMS_OUTPUT.PUT_LINE('Fecha de Emisión: ' || TO_CHAR(v_fecha_emision, 'DD-MM-YYYY HH24:MI'));
+    DBMS_OUTPUT.PUT_LINE('Fecha de Emisión: ' || TO_CHAR(v_fecha_emision, 'DD-MM-   YYYY HH24:MI'));
     DBMS_OUTPUT.PUT_LINE('--------------------------');
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
