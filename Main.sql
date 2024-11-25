@@ -74,11 +74,14 @@ CREATE TABLE AEROLINEA (
 );
 
 -- Tabla AVION
+CREATE OR REPLACE TYPE TIPO_ASIENTO IS VARRAY(5) OF VARCHAR2(10);
+
 CREATE TABLE AVION (
     id_avion NUMBER NOT NULL,
     modelo VARCHAR2(50) NOT NULL,
     capacidad NUMBER NOT NULL,
     id_aerolinea NUMBER NOT NULL,
+    asientos TIPO_ASIENTO,
     CONSTRAINT PK_AVION PRIMARY KEY (id_avion),
     CONSTRAINT FK_AVION_AEROLINEA FOREIGN KEY (id_aerolinea) REFERENCES AEROLINEA(id_aerolinea) ON DELETE CASCADE
 );
@@ -132,14 +135,12 @@ CREATE TABLE VUELO (
     CONSTRAINT FK_VUELO_AVION FOREIGN KEY (id_avion) REFERENCES AVION(id_avion) ON DELETE CASCADE
 );
 
-CREATE OR REPLACE TYPE TIPO_ASIENTO IS VARRAY(5) OF VARCHAR2(10);
-
 -- Tabla RESERVA (con una única restricción de unicidad en id_pasajero e id_vuelo)
 CREATE TABLE RESERVA (
     id_reserva NUMBER NOT NULL,
     id_pasajero NUMBER NOT NULL,
     id_vuelo NUMBER NOT NULL,
-    asientos TIPO_ASIENTOS, -- VARRAY para los asientos asignados
+    asientos TIPO_ASIENTO, -- VARRAY para los asientos asignados
     fecha_hora_reserva TIMESTAMP NOT NULL,
     motivo_viaje VARCHAR2(100) NOT NULL CHECK (motivo_viaje IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo')),
     tipo_boleto VARCHAR2(50) NOT NULL CHECK (tipo_boleto IN ('Económico', 'Ejecutivo', 'Primera Clase')),
@@ -156,7 +157,7 @@ CREATE TABLE CHECK_IN (
     fecha_hora_check_in TIMESTAMP NOT NULL,
     estado VARCHAR2(20) NOT NULL CHECK (estado IN ('Completado', 'Cancelado', 'Pendiente')),
     tipo_check_in VARCHAR2(20) NOT NULL CHECK (tipo_check_in IN ('Presencial', 'Online')),
-    numero_asientos TIPO_ASIENTOS, -- Asientos asignados para el check-in
+    numero_asientos TIPO_ASIENTO, -- Asientos asignados para el check-in
     numero_vuelo VARCHAR2(20),
     aerolinea VARCHAR2(100),
     destino VARCHAR2(100),
@@ -173,7 +174,7 @@ ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'DD-MM-YYYY HH24:MI:SS';
 -- ======================
 
 -- Trigger para validar el tamaño y peso del equipaje y aplicar un cobro extra
-CREATE OR REPLACE TRIGGER VALIDAR_TAMANO_PESO_Y_COBRO_EQUIPAJE
+CREATE OR REPLACE TRIGGER VALIDAR_EQUIPAJE
 BEFORE INSERT OR UPDATE ON EQUIPAJE
 FOR EACH ROW
 BEGIN
@@ -222,7 +223,7 @@ END;
 -- ======================
 
 -- Trigger para verificar y actualizar asistencia para pasajeros menores de edad
-CREATE OR REPLACE TRIGGER VERIFICAR_Y_ACTUALIZAR_ASISTENCIA_MENOR_EDAD
+CREATE OR REPLACE TRIGGER ASISTENCIA_MENOR_EDAD
 BEFORE INSERT OR UPDATE ON PASAJERO
 FOR EACH ROW
 BEGIN
@@ -248,8 +249,7 @@ BEGIN
     SELECT p.visa_requerida, p.tipo_visa
     INTO v_visa_requerida, v_tipo_visa
     FROM PAIS p
-    JOIN CIUDAD c ON c.id_pais = p.id_pais
-    JOIN AEROPUERTO a ON a.id_ciudad = c.id_ciudad
+    JOIN AEROPUERTO a ON a.pais_id = p.id_pais
     JOIN VUELO v ON v.id_aeropuerto_destino = a.id_aeropuerto
     WHERE v.id_vuelo = :NEW.id_vuelo;
     IF v_visa_requerida = 'Sí' AND v_tipo_visa IS NULL THEN
@@ -269,8 +269,7 @@ BEGIN
     SELECT p.pasaporte_requerido
     INTO v_pasaporte_requerido
     FROM PAIS p
-    JOIN CIUDAD c ON c.id_pais = p.id_pais
-    JOIN AEROPUERTO a ON a.id_ciudad = c.id_ciudad
+    JOIN AEROPUERTO a ON a.pais_id = p.id_pais
     JOIN VUELO v ON v.id_aeropuerto_destino = a.id_aeropuerto
     WHERE v.id_vuelo = :NEW.id_vuelo;
     SELECT documento_identidad
@@ -331,12 +330,12 @@ CREATE OR REPLACE TRIGGER TRG_VERIFICAR_DURACION
 BEFORE INSERT OR UPDATE ON VUELO
 FOR EACH ROW
 BEGIN
-    :NEW.duracion := (:NEW.fecha_hora_llegada - :NEW.fecha_hora_salida) * 24*60;
+    :NEW.duracion := (CAST(:NEW.fecha_hora_llegada AS DATE) - CAST(:NEW.fecha_hora_salida AS DATE)) * 24;
 END;
 /
 
 -- Trigger para actualizar el estado del vuelo a "Cancelado" si una reserva es cancelada
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO_CANCELADO
+CREATE OR REPLACE TRIGGER ESTADO_VUELO_CANCELADO
 AFTER UPDATE ON RESERVA
 FOR EACH ROW
 BEGIN
@@ -349,7 +348,7 @@ END;
 /
 
 -- Trigger para restringir la actualización de la fecha de salida de un vuelo si faltan menos de 24 horas
-CREATE OR REPLACE TRIGGER RESTRINGIR_ACTUALIZACION_FECHA_VUELO
+CREATE OR REPLACE TRIGGER ACTUALIZACION_FECHA_VUELO
 BEFORE UPDATE OF fecha_hora_salida ON VUELO
 FOR EACH ROW
 BEGIN
@@ -364,35 +363,59 @@ END;
 -- ======================
 
 -- Trigger para validar de asientos 
--- Trigger para actualizar asientos disponibles en un vuelo tras una reserva
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ASIENTOS_DISPONIBLES
-BEFORE INSERT OR DELETE ON RESERVA
+
+CREATE OR REPLACE TRIGGER VALIDAR_ASIENTO
+BEFORE INSERT OR UPDATE ON ASIENTO
 FOR EACH ROW
-DECLARE
-    v_index NUMBER;
 BEGIN
-    IF INSERTING THEN
-        -- Eliminar el asiento reservado de la lista de asientos disponibles
-        SELECT INSTR(v.asientos_disponibles, :NEW.id_asiento)
-        INTO v_index
-        FROM VUELO v
-        WHERE v.id_vuelo = :NEW.id_vuelo;
-        
-        IF v_index > 0 THEN
-            DELETE FROM TABLE(v.asientos_disponibles) WHERE COLUMN_VALUE = :NEW.id_asiento;
-        END IF;
-    ELSIF DELETING THEN
-        -- Añadir el asiento liberado de nuevo a la lista de asientos disponibles
-        UPDATE VUELO
-        SET asientos_disponibles = asientos_disponibles || :OLD.id_asiento
-        WHERE id_vuelo = :OLD.id_vuelo;
+    IF :NEW.numero_asiento IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20010, 'El número de asiento no puede ser nulo.');
+    END IF;
+    IF :NEW.estado IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20011, 'El estado del asiento no puede ser nulo.');
+    END IF;
+    IF :NEW.estado NOT IN ('Disponible', 'No disponible') THEN
+        RAISE_APPLICATION_ERROR(-20012, 'El estado del asiento debe ser "Disponible" o "No disponible".');
     END IF;
 END;
 /
 
+-- Trigger para crear asientos automáticamente al registrar un avión
+
+CREATE OR REPLACE TRIGGER CREAR_ASIENTOS_AVION
+BEFORE INSERT ON AVION
+FOR EACH ROW
+BEGIN
+    :NEW.asientos := TIPO_ASIENTO();
+    FOR i IN 1..5 LOOP
+        :NEW.asientos.EXTEND;
+        :NEW.asientos(i) := 'Disponible';
+    END LOOP;
+END;
+/
+
+-- Trigger para verificar la disponibilidad de asientos al asignar vuelos
+
+CREATE OR REPLACE TRIGGER VALIDAR_DISPONIBILIDAD_ASIENTO
+BEFORE INSERT OR UPDATE ON RESERVA
+FOR EACH ROW
+DECLARE
+    v_asiento_disponible BOOLEAN := FALSE;
+BEGIN
+    FOR i IN 1..:NEW.asientos.COUNT LOOP
+        IF :NEW.asientos(i) = 'Disponible' THEN
+            v_asiento_disponible := TRUE;
+            EXIT;
+        END IF;
+    END LOOP;
+    IF NOT v_asiento_disponible THEN
+        RAISE_APPLICATION_ERROR(-20009, 'No hay asientos disponibles.');
+    END IF;
+END;
 
 
 -- Trigger para verificar la disponibilidad de puertas al asignar vuelos
+
 CREATE OR REPLACE TRIGGER VALIDAR_DISPONIBILIDAD_PUERTA
 BEFORE INSERT OR UPDATE ON VUELO
 FOR EACH ROW
@@ -409,45 +432,6 @@ BEGIN
     IF v_puerta_ocupada > 0 THEN
         RAISE_APPLICATION_ERROR(-20007, 'La puerta seleccionada ya está ocupada por otro vuelo en este intervalo de tiempo.');
     END IF;
-END;
-/
-
--- Trigger para actualizar el estado del asiento al hacer check-in
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_ASIENTO_CHECK_IN
-AFTER INSERT ON CHECK_IN
-FOR EACH ROW
-BEGIN
-    UPDATE ASIENTO
-    SET estado = 'No disponible'
-    WHERE id_asiento = (SELECT id_asiento FROM RESERVA WHERE id_reserva = :NEW.id_reserva);
-END;
-/
-
--- Trigger para liberar el estado del asiento al finalizar el vuelo
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_ASIENTO_FIN_VUELO
-AFTER UPDATE OF estado ON VUELO
-FOR EACH ROW
-BEGIN
-    IF :NEW.estado = 'Aterrizado' THEN
-        UPDATE ASIENTO
-        SET estado = 'Disponible'
-        WHERE id_asiento IN (
-            SELECT id_asiento
-            FROM RESERVA
-            WHERE id_vuelo = :NEW.id_vuelo
-        );
-    END IF;
-END;
-/
-
--- Trigger para liberar y eliminar asientos al cancelar una reserva
-CREATE OR REPLACE TRIGGER LIBERAR_ASIENTOS_RESERVA
-AFTER DELETE ON RESERVA
-FOR EACH ROW
-BEGIN
-    UPDATE ASIENTO
-    SET estado = 'Disponible'
-    WHERE id_asiento = :OLD.id_asiento;
 END;
 /
 
@@ -468,61 +452,31 @@ BEGIN
 END;
 /
 
--- Trigger para controlar disponibilidad de vuelos y asientos en modificaciones de reserva
+-- Trigger para controlar disponibilidad de vuelos
+
 CREATE OR REPLACE TRIGGER VALIDAR_MODIFICACION_RESERVA
 BEFORE UPDATE ON RESERVA
 FOR EACH ROW
 DECLARE
     v_estado_vuelo VARCHAR2(20);
-    v_estado_asiento VARCHAR2(20);
 BEGIN
     SELECT estado INTO v_estado_vuelo FROM VUELO WHERE id_vuelo = :NEW.id_vuelo;
     IF v_estado_vuelo != 'Programado' THEN
         RAISE_APPLICATION_ERROR(-20031, 'Solo se pueden modificar reservas en vuelos programados.');
     END IF;
-
-    SELECT estado INTO v_estado_asiento FROM ASIENTO WHERE id_asiento = :NEW.id_asiento;
-    IF v_estado_asiento != 'Disponible' THEN
-        RAISE_APPLICATION_ERROR(-20032, 'El asiento seleccionado no está disponible para esta reserva.');
-    END IF;
 END;
 /
-
---Trigger genera documento de embarque automáticamente tras completar el CHECK_IN.
-CREATE OR REPLACE TRIGGER GENERAR_DOCUMENTO_TRAS_CHECK_IN
-AFTER INSERT ON CHECK_IN
-FOR EACH ROW
-BEGIN
-    INSERT INTO DOCUMENTO_EMBARQUE (
-        id_documento, id_check_in, id_pasajero, id_vuelo, id_asiento, 
-        nombre_pasajero, apellido_pasajero, numero_vuelo, aerolinea, 
-        destino, fecha_salida, id_terminal, id_puerta, asiento, tipo_boleto, fecha_hora
-    )
-    SELECT SEQ_DOCUMENTO_EMBARQUE.NEXTVAL, :NEW.id_check_in, p.id_pasajero, r.id_vuelo, r.id_asiento,
-           p.nombre, p.apellido, v.numero_vuelo, a.nombre_aerolinea, d.nombre,
-           v.fecha_hora_salida, t.id_terminal, g.id_puerta, a.numero_asiento, r.tipo_boleto, SYSDATE
-    FROM PASAJERO p
-    JOIN RESERVA r ON p.id_pasajero = r.id_pasajero
-    JOIN VUELO v ON r.id_vuelo = v.id_vuelo
-    JOIN AEROLINEA a ON v.id_aerolinea = a.id_aerolinea
-    JOIN CIUDAD d ON d.id_ciudad = (SELECT id_ciudad FROM AEROPUERTO WHERE id_aeropuerto = v.id_aeropuerto_destino)
-    JOIN TERMINAL_AEROPUERTO t ON t.id_aeropuerto = v.id_aeropuerto_destino
-    JOIN PUERTA g ON g.id_terminal = t.id_terminal
-    WHERE r.id_reserva = :NEW.id_reserva;
-END;
-/
-
-
 
 -- ======================
 -- Procedimientos
 -- ======================
 
 -- Procedimiento para realizar el check-in de un pasajero
+
 CREATE OR REPLACE PROCEDURE proc_realizar_check_in (
     p_id_reserva NUMBER,
     p_documento_identidad VARCHAR2,
-    p_id_asiento NUMBER,
+    p_id_asiento TIPO_ASIENTO,
     p_peso_equipaje NUMBER
 ) IS
     v_id_pasajero NUMBER;
@@ -544,18 +498,6 @@ BEGIN
         END IF;
     END IF;
 
-    -- Verificación de disponibilidad del asiento
-    BEGIN
-        SELECT 1
-        INTO v_id_pasajero
-        FROM ASIENTO
-        WHERE id_asiento = p_id_asiento
-        AND estado = 'Disponible';
-    EXCEPTION
-        WHEN NO_DATA_FOUND THEN
-            RAISE_APPLICATION_ERROR(-20002, 'El asiento no está disponible.');
-    END;
-
     -- Verificación del peso del equipaje
     IF p_peso_equipaje > 23 THEN
         RAISE_APPLICATION_ERROR(-20004, 'El peso del equipaje excede el límite permitido. Por favor, pague una multa o reduzca el peso.');
@@ -575,11 +517,6 @@ BEGIN
         END
     );
 
-    -- Actualización del estado del asiento a 'No disponible'
-    UPDATE ASIENTO
-    SET estado = 'No disponible'
-    WHERE id_asiento = p_id_asiento;
-
     COMMIT;
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
@@ -590,41 +527,50 @@ EXCEPTION
 END;
 /
 
--- Procedimiento para asignar un asiento disponible si el pasajero no tiene uno asignado
-CREATE OR REPLACE PROCEDURE asignar_asiento_disponible (
-    p_id_reserva IN NUMBER
+-- Procedimiento para asignar un asiento específico a una reserva
+
+CREATE OR REPLACE PROCEDURE asignar_asiento (
+    p_id_reserva IN NUMBER,
+    p_asiento IN VARCHAR2
 ) IS
     v_id_vuelo NUMBER;
-    v_id_asiento NUMBER;
+    v_asientos TIPO_ASIENTO;
+    v_asiento_disponible BOOLEAN := FALSE;
 BEGIN
     -- Obtener el ID del vuelo de la reserva
     SELECT id_vuelo
     INTO v_id_vuelo
     FROM RESERVA
     WHERE id_reserva = p_id_reserva;
-    
-    -- Buscar un asiento disponible en el vuelo especificado
-    SELECT id_asiento
-    INTO v_id_asiento
-    FROM ASIENTO
-    WHERE estado = 'Disponible'
-      AND id_avion = (SELECT id_avion FROM VUELO WHERE id_vuelo = v_id_vuelo)
-      AND ROWNUM = 1;  -- Toma el primer asiento disponible
 
-    -- Actualizar la reserva con el asiento asignado
-    UPDATE RESERVA
-    SET id_asiento = v_id_asiento
-    WHERE id_reserva = p_id_reserva;
+    -- Obtener los asientos del avión
+    SELECT asientos
+    INTO v_asientos
+    FROM AVION a
+    JOIN VUELO v ON a.id_avion = v.id_avion
+    WHERE v.id_vuelo = v_id_vuelo;
 
-    -- Cambiar el estado del asiento a "No disponible"
-    UPDATE ASIENTO
-    SET estado = 'No disponible'
-    WHERE id_asiento = v_id_asiento;
+    -- Verificar si el asiento está disponible
+    FOR i IN 1..v_asientos.COUNT LOOP
+        IF v_asientos(i) = p_asiento AND v_asientos(i) = 'Disponible' THEN
+            v_asiento_disponible := TRUE;
+            EXIT;
+        END IF;
+    END LOOP;
 
-    COMMIT;
+    IF v_asiento_disponible THEN
+        -- Actualizar la reserva con el asiento asignado
+        UPDATE RESERVA
+        SET asientos = TIPO_ASIENTO(p_asiento)
+        WHERE id_reserva = p_id_reserva;
+
+        COMMIT;
+    ELSE
+        RAISE_APPLICATION_ERROR(-20018, 'El asiento seleccionado no está disponible.');
+    END IF;
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20014, 'No hay asientos disponibles para este vuelo.');
+        RAISE_APPLICATION_ERROR(-20019, 'Reserva no encontrada.');
     WHEN OTHERS THEN
         ROLLBACK;
         RAISE;
@@ -778,16 +724,15 @@ END;
 /
 
 --Procedimiento para Generar Informe de Vuelos de un Pasajero
-CREATE OR REPLACE PROCEDURE generar_informe_vuelos_pasajero (
+CREATE OR REPLACE PROCEDURE informe_vuelos_pasajero (
     p_id_pasajero NUMBER
 ) IS
     CURSOR c_vuelos IS
-        SELECT v.id_vuelo, a.nombre_aerolinea, v.fecha_hora_salida, v.fecha_hora_llegada, d.nombre AS destino
+        SELECT v.id_vuelo, a.nombre_aerolinea, v.fecha_hora_salida, v.fecha_hora_llegada, ap_dest.nombre AS destino
         FROM VUELO v
         JOIN RESERVA r ON v.id_vuelo = r.id_vuelo
         JOIN AEROLINEA a ON v.id_aerolinea = a.id_aerolinea
         JOIN AEROPUERTO ap_dest ON v.id_aeropuerto_destino = ap_dest.id_aeropuerto
-        JOIN CIUDAD d ON ap_dest.id_ciudad = d.id_ciudad
         WHERE r.id_pasajero = p_id_pasajero
         AND v.estado IN ('Programado', 'En vuelo');
 BEGIN
@@ -806,7 +751,6 @@ END;
 CREATE OR REPLACE PROCEDURE obtener_boleto_abordaje (
     p_id_check_in NUMBER
 ) IS
-    v_id_documento NUMBER;
     v_nombre_pasajero VARCHAR2(100);
     v_apellido_pasajero VARCHAR2(100);
     v_numero_vuelo VARCHAR2(20);
@@ -817,33 +761,38 @@ CREATE OR REPLACE PROCEDURE obtener_boleto_abordaje (
     v_fecha_llegada TIMESTAMP;
     v_terminal NUMBER;
     v_puerta NUMBER;
-    v_asiento VARCHAR2(10);
+    v_asiento TIPO_ASIENTO;
     v_tipo_boleto VARCHAR2(50);
-    v_clase_servicio VARCHAR2(50);
-    v_fecha_emision TIMESTAMP;
+    v_fecha_emision TIMESTAMP := SYSDATE;
 BEGIN
     -- Obtener los datos del boleto de abordaje y detalles adicionales del vuelo y pasajero
-    SELECT id_documento, nombre_pasajero, apellido_pasajero, numero_vuelo,
-           aerolinea, origen, destino, fecha_salida, fecha_llegada, 
-           id_terminal, id_puerta, asiento, tipo_boleto, fecha_hora
-    INTO v_id_documento, v_nombre_pasajero, v_apellido_pasajero, v_numero_vuelo,
-         v_aerolinea, v_origen, v_destino, v_fecha_salida, v_fecha_llegada, 
-         v_terminal, v_puerta, v_asiento, v_tipo_boleto, v_fecha_emision
-    FROM DOCUMENTO_EMBARQUE
-    WHERE id_check_in = p_id_check_in;
+    SELECT p.nombre, p.apellido, v.id_vuelo, a.nombre_aerolinea, ap_origen.nombre, ap_dest.nombre, 
+           v.fecha_hora_salida, v.fecha_hora_llegada, t.id_terminal, pt.id_puerta, 
+           r.asientos, r.tipo_boleto
+    INTO v_nombre_pasajero, v_apellido_pasajero, v_numero_vuelo, v_aerolinea, v_origen, v_destino, 
+         v_fecha_salida, v_fecha_llegada, v_terminal, v_puerta, 
+         v_asiento, v_tipo_boleto
+    FROM PASAJERO p
+    JOIN RESERVA r ON p.id_pasajero = r.id_pasajero
+    JOIN VUELO v ON r.id_vuelo = v.id_vuelo
+    JOIN AEROLINEA a ON v.id_aerolinea = a.id_aerolinea
+    JOIN AEROPUERTO ap_origen ON v.id_aeropuerto_origen = ap_origen.id_aeropuerto
+    JOIN AEROPUERTO ap_dest ON v.id_aeropuerto_destino = ap_dest.id_aeropuerto
+    JOIN TERMINAL_AEROPUERTO t ON ap_dest.id_aeropuerto = t.id_aeropuerto
+    JOIN PUERTA pt ON t.id_terminal = pt.id_terminal
+    WHERE r.id_reserva = p_id_check_in;
 
     -- Mostrar la información del boleto de abordaje
     DBMS_OUTPUT.PUT_LINE('--- TICKET DE ABORDAJE ---');
-    DBMS_OUTPUT.PUT_LINE('Documento ID: ' || v_id_documento);
     DBMS_OUTPUT.PUT_LINE('Pasajero: ' || v_nombre_pasajero || ' ' || v_apellido_pasajero);
     DBMS_OUTPUT.PUT_LINE('Vuelo: ' || v_numero_vuelo || ' - ' || v_aerolinea);
     DBMS_OUTPUT.PUT_LINE('Origen: ' || v_origen || ' - Destino: ' || v_destino);
     DBMS_OUTPUT.PUT_LINE('Fecha de Salida: ' || TO_CHAR(v_fecha_salida, 'DD-MM-YYYY HH24:MI'));
     DBMS_OUTPUT.PUT_LINE('Fecha de Llegada: ' || TO_CHAR(v_fecha_llegada, 'DD-MM-YYYY HH24:MI'));
     DBMS_OUTPUT.PUT_LINE('Terminal: ' || v_terminal || ' - Puerta: ' || v_puerta);
-    DBMS_OUTPUT.PUT_LINE('Asiento: ' || v_asiento);
+    DBMS_OUTPUT.PUT_LINE('Asientos: ' || v_asiento(1) || ', ' || v_asiento(2) || ', ' || v_asiento(3) || ', ' || v_asiento(4) || ', ' || v_asiento(5));
     DBMS_OUTPUT.PUT_LINE('Clase de Servicio: ' || v_tipo_boleto);
-    DBMS_OUTPUT.PUT_LINE('Fecha de Emisión: ' || TO_CHAR(v_fecha_emision, 'DD-MM-   YYYY HH24:MI'));
+    DBMS_OUTPUT.PUT_LINE('Fecha de Emisión: ' || TO_CHAR(v_fecha_emision, 'DD-MM-YYYY HH24:MI'));
     DBMS_OUTPUT.PUT_LINE('--------------------------');
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
