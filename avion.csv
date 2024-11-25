@@ -1,0 +1,11 @@
+﻿id_avion,modelo,capacidad,id_aerolinea
+1,Boeing 787,260,1
+2,Airbus A330,180,2
+3,Embraer E190,110,3
+4,Boeing 787,162,4
+5,Airbus A330,217,5
+6,Boeing 737,188,6
+7,Embraer E190,227,7
+8,Airbus A320,255,8
+9,Boeing 787,276,9
+10,Airbus A330,176,10
