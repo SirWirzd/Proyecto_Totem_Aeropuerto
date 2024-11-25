@@ -1,0 +1,84 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableProxyOraclev11g class="oracle.dbtools.crest.model.design.storage.oracle.v11g.TableProxyOraclev11g" name="PASAJERO" directorySegmentName="seg_0" id="BC11F0C0-5C0A-23C2-308A-CF39736A806B">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<schemaObject>E0823C64-940F-EC6C-6FA5-09F263E8EAD4</schemaObject>
+<logging>YES</logging>
+<partitionedRowMovement>DISABLE</partitionedRowMovement>
+<segment>44E5BADC-D4B6-C1E5-AF26-65157BB3B254</segment>
+<tableSpace>3C75C005-2C80-9D14-D278-6E0DBDB38C64</tableSpace>
+<temporaryChanged>false</temporaryChanged>
+<accessDriverType>oracle_loader</accessDriverType>
+<rejectLimit></rejectLimit>
+<columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
+<ColumnProxy name="ID_PASAJERO" id="438BCAE9-C6C7-78FA-3CD8-76B9BE9FF343">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="TELEFONO_PASAJERO" id="4E983227-2343-AE2A-5A0E-EB83C65E57E6">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="DOCUMENTO_IDENTIDAD" id="918FF8B6-5022-F680-F09A-1F949E656E56">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="EDAD" id="94841204-BDCF-E7A7-0411-5C5093193505">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="APELLIDO" id="9B9E4FB6-BFA5-53BB-E998-F22F641C3D49">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ASISTENCIA" id="A9964A44-FABE-9836-9CED-455E693464BB">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="CORREO_ELECTRONICO" id="C857ABC7-0FD1-EC20-08AD-D90BAD17FB68">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="FECHA_NACIMIENTO" id="CC268517-3945-96C6-31F8-CE22EFE353F7">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="NOMBRE" id="FBDBEF68-4B62-D984-F231-56E35E1EB5D4">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+</columnProxies>
+<indexProxies>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="PK_PASAJERO" id="E8B0F790-0F9A-739D-EF2D-84587D6D79C2">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<schemaObject>E0823C64-940F-EC6C-6FA5-09F263E8EAD4</schemaObject>
+<segment>C0E8B4DE-1170-DB61-5ED1-138C09AD5520</segment>
+<tableSpace>3C75C005-2C80-9D14-D278-6E0DBDB38C64</tableSpace>
+</IndexProxy>
+</indexProxies>
+<primaryKeys>
+<PrimaryKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.PKProxyOraclev10g" name="PK_PASAJERO" id="B6016CB7-519C-8819-FC0D-C6A4710C3190">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<segment>C0E8B4DE-1170-DB61-5ED1-138C09AD5520</segment>
+<tableSpace>3C75C005-2C80-9D14-D278-6E0DBDB38C64</tableSpace>
+<existingIndex>E8B0F790-0F9A-739D-EF2D-84587D6D79C2</existingIndex>
+<indexSegment>C0E8B4DE-1170-DB61-5ED1-138C09AD5520</indexSegment>
+<indexSort>SORTED</indexSort>
+<usingIndex>BY INDEX NAME</usingIndex>
+</PrimaryKey>
+</primaryKeys>
+</TableProxyOraclev11g>

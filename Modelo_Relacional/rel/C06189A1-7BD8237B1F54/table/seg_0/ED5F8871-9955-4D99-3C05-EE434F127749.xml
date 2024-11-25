@@ -1,0 +1,122 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="ED5F8871-9955-4D99-3C05-EE434F127749" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="AVION">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>AVION</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID_AVION" id="1B515BD8-0873-2574-704F-182C10F8AAFD">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>AVION</sourceObjSchema>
+<sourceObjName>ID_AVION</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="MODELO" id="1EE2AA36-B174-C863-2467-7506AF4EACC6">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>AVION</sourceObjSchema>
+<sourceObjName>MODELO</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>50 BYTE</dataTypeSize>
+<ownDataTypeParameters>50 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="CAPACIDAD" id="E0088A1D-941B-4E7E-BC9F-A5F648D07885">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>AVION</sourceObjSchema>
+<sourceObjName>CAPACIDAD</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="ID_AEROLINEA" id="E388530F-747F-3A8B-D835-6E02725FF735">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>AVION</sourceObjSchema>
+<sourceObjName>ID_AEROLINEA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="DAC8C14D-8A3B-8DC6-0971-F4A11CD3BCEF" referredColumn="1BC2D572-2462-FD9B-F605-E5C8740DCD01"/>
+</associations>
+</Column>
+<Column name="ASIENTOS" id="259ADA03-EC96-46B9-5C50-36A596AD5A63">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>AVION</sourceObjSchema>
+<sourceObjName>ASIENTOS</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="6A075484-EDB4-2A0B-10C8-7654FA409654" name="PK_AVION">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PK_AVION</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="1B515BD8-0873-2574-704F-182C10F8AAFD"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="CCF979D6-6C27-FF83-FE69-FFCBB8FF523F" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="PK_AVION">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PK_AVION</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="1B515BD8-0873-2574-704F-182C10F8AAFD"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="A228498D-31CA-B7A5-2C08-ED5C8EE005D5" name="FK_AVION_AEROLINEA">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="E388530F-747F-3A8B-D835-6E02725FF735"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

@@ -1,0 +1,136 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="7EC13D58-C7C5-5581-4B52-7F0EC742B910" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="PAIS">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PAIS</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID_PAIS" id="270F8B4A-F178-B718-7494-C3BB9BD828F4">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>PAIS</sourceObjSchema>
+<sourceObjName>ID_PAIS</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="NOMBRE" id="F47AA956-BD14-1774-0429-9C1F8D36EA14">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>PAIS</sourceObjSchema>
+<sourceObjName>NOMBRE</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>100 BYTE</dataTypeSize>
+<ownDataTypeParameters>100 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="VISA_REQUERIDA" id="17C5C37C-89EF-2908-1A91-27323E1799B6">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>PAIS</sourceObjSchema>
+<sourceObjName>VISA_REQUERIDA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<constraintName>CHCK_VISA_PAIS</constraintName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>20 BYTE</dataTypeSize>
+<listOfValues>
+<valueDef value="&apos;No&apos;" description=""/>
+<valueDef value="&apos;SÃ­&apos;" description=""/>
+</listOfValues>
+<ownDataTypeParameters>20 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="TIPO_VISA" id="478368CB-15A5-254F-E9F2-EEBFD8A131A6">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>PAIS</sourceObjSchema>
+<sourceObjName>TIPO_VISA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>99 BYTE</dataTypeSize>
+<ownDataTypeParameters>99 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="PASAPORTE_REQUERIDO" id="AEEFCBE1-C9E5-3156-4412-4345CD5C5992">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>PAIS</sourceObjSchema>
+<sourceObjName>PASAPORTE_REQUERIDO</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<constraintName>CHCK_PASAPORTE</constraintName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>20 BYTE</dataTypeSize>
+<listOfValues>
+<valueDef value="&apos;No&apos;" description=""/>
+<valueDef value="&apos;SÃ­&apos;" description=""/>
+</listOfValues>
+<ownDataTypeParameters>20 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="6FB1074E-D159-32DF-62A2-C91DC1F2D4A3" name="PK_PAIS">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PK_PAIS</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="270F8B4A-F178-B718-7494-C3BB9BD828F4"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="1E6D66BE-A33B-E6B4-7975-6106CB75F4E7" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="PK_PAIS">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PK_PAIS</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="270F8B4A-F178-B718-7494-C3BB9BD828F4"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+<tableCheckConstraints itemClass="oracle.dbtools.crest.model.design.constraint.TableLevelConstraint">
+<tableCheckConstraint name="CHCK_TIPO_VISA" directorySegmentName="seg_0" id="65EBD2E5-1746-DB9F-862E-13B5893D40AA">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>CHCK_TIPO_VISA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<rule><![CDATA[visa_requerida = 'No' OR tipo_visa IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo')]]></rule>
+</tableCheckConstraint>
+</tableCheckConstraints>
+</Table>

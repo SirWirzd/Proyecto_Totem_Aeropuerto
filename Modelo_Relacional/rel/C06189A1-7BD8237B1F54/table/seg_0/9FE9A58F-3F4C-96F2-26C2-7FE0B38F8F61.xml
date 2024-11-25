@@ -1,0 +1,96 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="9FE9A58F-3F4C-96F2-26C2-7FE0B38F8F61" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="PUERTA">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PUERTA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID_PUERTA" id="47C7BBF6-5BB8-035B-7024-1C677C777F55">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>PUERTA</sourceObjSchema>
+<sourceObjName>ID_PUERTA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="NOMBRE" id="7F253868-EBA2-7FCB-C6DA-9D0D276CD93F">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>PUERTA</sourceObjSchema>
+<sourceObjName>NOMBRE</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>50 BYTE</dataTypeSize>
+<ownDataTypeParameters>50 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="ID_TERMINAL" id="8ED0DC8A-BE7A-5D56-E7DF-719443DE0DB6">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>PUERTA</sourceObjSchema>
+<sourceObjName>ID_TERMINAL</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="B60A698D-0028-C233-F7F9-5280C25CB85B" referredColumn="C0DE75AC-FE0D-1611-2CA8-4AD4754AA98E"/>
+</associations>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="359F1CA0-61A6-7AFA-85AD-8F58830ABBE8" name="PK_PUERTA">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PK_PUERTA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="47C7BBF6-5BB8-035B-7024-1C677C777F55"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="B4EE7F5F-ACEC-1FEA-C742-3F8A1B46FD56" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="PK_PUERTA">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PK_PUERTA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="47C7BBF6-5BB8-035B-7024-1C677C777F55"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="ABA1AB59-D1D0-5071-462F-A2F4F11AC958" name="FK_PUERTA_TERMINAL">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="8ED0DC8A-BE7A-5D56-E7DF-719443DE0DB6"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

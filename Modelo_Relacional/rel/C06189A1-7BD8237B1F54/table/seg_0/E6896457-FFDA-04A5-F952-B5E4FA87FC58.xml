@@ -1,0 +1,70 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="E6896457-FFDA-04A5-F952-B5E4FA87FC58" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="AEROLINEA">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>AEROLINEA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID_AEROLINEA" id="1BC2D572-2462-FD9B-F605-E5C8740DCD01">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>AEROLINEA</sourceObjSchema>
+<sourceObjName>ID_AEROLINEA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="NOMBRE_AEROLINEA" id="27728D72-97AF-34D4-6C70-E3E2DB011D27">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>AEROLINEA</sourceObjSchema>
+<sourceObjName>NOMBRE_AEROLINEA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>100 BYTE</dataTypeSize>
+<ownDataTypeParameters>100 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="624FF9A6-2A0C-7D13-74E5-2EC7BFA18B2C" name="PK_AEROLINEA">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PK_AEROLINEA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="1BC2D572-2462-FD9B-F605-E5C8740DCD01"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="976F7F52-BFE3-9667-C4D6-BBFB0FE46376" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="PK_AEROLINEA">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PK_AEROLINEA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="1BC2D572-2462-FD9B-F605-E5C8740DCD01"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

@@ -1,0 +1,71 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableProxyOraclev11g class="oracle.dbtools.crest.model.design.storage.oracle.v11g.TableProxyOraclev11g" name="PAIS" directorySegmentName="seg_0" id="7EC13D58-C7C5-5581-4B52-7F0EC742B910">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<schemaObject>E0823C64-940F-EC6C-6FA5-09F263E8EAD4</schemaObject>
+<logging>YES</logging>
+<partitionedRowMovement>DISABLE</partitionedRowMovement>
+<segment>44E5BADC-D4B6-C1E5-AF26-65157BB3B254</segment>
+<tableSpace>3C75C005-2C80-9D14-D278-6E0DBDB38C64</tableSpace>
+<temporaryChanged>false</temporaryChanged>
+<accessDriverType>oracle_loader</accessDriverType>
+<rejectLimit></rejectLimit>
+<columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
+<ColumnProxy name="VISA_REQUERIDA" id="17C5C37C-89EF-2908-1A91-27323E1799B6">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ID_PAIS" id="270F8B4A-F178-B718-7494-C3BB9BD828F4">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="TIPO_VISA" id="478368CB-15A5-254F-E9F2-EEBFD8A131A6">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="PASAPORTE_REQUERIDO" id="AEEFCBE1-C9E5-3156-4412-4345CD5C5992">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="NOMBRE" id="F47AA956-BD14-1774-0429-9C1F8D36EA14">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+</columnProxies>
+<indexProxies>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="PK_PAIS" id="1E6D66BE-A33B-E6B4-7975-6106CB75F4E7">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<schemaObject>E0823C64-940F-EC6C-6FA5-09F263E8EAD4</schemaObject>
+<segment>C0E8B4DE-1170-DB61-5ED1-138C09AD5520</segment>
+<tableSpace>3C75C005-2C80-9D14-D278-6E0DBDB38C64</tableSpace>
+</IndexProxy>
+</indexProxies>
+<primaryKeys>
+<PrimaryKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.PKProxyOraclev10g" name="PK_PAIS" id="6FB1074E-D159-32DF-62A2-C91DC1F2D4A3">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<segment>C0E8B4DE-1170-DB61-5ED1-138C09AD5520</segment>
+<tableSpace>3C75C005-2C80-9D14-D278-6E0DBDB38C64</tableSpace>
+<existingIndex>1E6D66BE-A33B-E6B4-7975-6106CB75F4E7</existingIndex>
+<indexSegment>C0E8B4DE-1170-DB61-5ED1-138C09AD5520</indexSegment>
+<indexSort>SORTED</indexSort>
+<usingIndex>BY INDEX NAME</usingIndex>
+</PrimaryKey>
+</primaryKeys>
+<tableCheckConstraints itemClass="oracle.dbtools.crest.model.design.storage.oracle.TableCheckConstraintOracle">
+<TableCheckConstraint name="CHCK_TIPO_VISA" id="65EBD2E5-1746-DB9F-862E-13B5893D40AA">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</TableCheckConstraint>
+</tableCheckConstraints>
+</TableProxyOraclev11g>

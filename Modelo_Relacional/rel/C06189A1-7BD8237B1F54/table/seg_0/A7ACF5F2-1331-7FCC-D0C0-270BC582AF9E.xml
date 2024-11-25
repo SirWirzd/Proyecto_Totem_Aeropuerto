@@ -1,0 +1,206 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<Table class="oracle.dbtools.crest.model.design.relational.Table" directorySegmentName="seg_0" id="A7ACF5F2-1331-7FCC-D0C0-270BC582AF9E" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="CHECK_IN">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>CHECK_IN</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<allowColumnReorder>false</allowColumnReorder>
+<existDependencyGenerateInDDl>true</existDependencyGenerateInDDl>
+<parsed>true</parsed>
+<columns itemClass="oracle.dbtools.crest.model.design.relational.Column">
+<Column name="ID_CHECK_IN" id="34639932-F318-AFCE-14A0-708F4289C5DF">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>CHECK_IN</sourceObjSchema>
+<sourceObjName>ID_CHECK_IN</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="ID_RESERVA" id="057134EC-C44F-E102-3FCE-A955DC9B712B">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>CHECK_IN</sourceObjSchema>
+<sourceObjName>ID_RESERVA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT019</logicalDatatype>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+<associations>
+<colAssociation fkAssociation="002C50E9-B568-6DC3-C0B4-991F71D26D5D" referredColumn="DE4BFE27-999D-BBB3-5062-3BAFE10A2ABE"/>
+</associations>
+</Column>
+<Column name="FECHA_HORA_CHECK_IN" id="D5E0927E-0425-BC31-436D-4DAADD164155">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>CHECK_IN</sourceObjSchema>
+<sourceObjName>FECHA_HORA_CHECK_IN</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT015</logicalDatatype>
+<dataTypePrecision>6</dataTypePrecision>
+<ownDataTypeParameters>,6,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="ESTADO" id="7BA9CA8F-4F4B-6D7B-EA25-F2757969DAF7">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>CHECK_IN</sourceObjSchema>
+<sourceObjName>ESTADO</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<constraintName>SYS_C008872</constraintName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>20 BYTE</dataTypeSize>
+<listOfValues>
+<valueDef value="&apos;Cancelado&apos;" description=""/>
+<valueDef value="&apos;Completado&apos;" description=""/>
+<valueDef value="&apos;Pendiente&apos;" description=""/>
+</listOfValues>
+<ownDataTypeParameters>20 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="TIPO_CHECK_IN" id="872BB312-1C79-D452-2A4C-E27BA57CE184">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>CHECK_IN</sourceObjSchema>
+<sourceObjName>TIPO_CHECK_IN</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<constraintName>SYS_C008873</constraintName>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>20 BYTE</dataTypeSize>
+<listOfValues>
+<valueDef value="&apos;Online&apos;" description=""/>
+<valueDef value="&apos;Presencial&apos;" description=""/>
+</listOfValues>
+<ownDataTypeParameters>20 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="NUMERO_ASIENTOS" id="E7AF299E-779B-BB28-28DA-F9DC26418DC9">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>CHECK_IN</sourceObjSchema>
+<sourceObjName>NUMERO_ASIENTOS</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<ownDataTypeParameters>,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="NUMERO_VUELO" id="1C7779B3-2BE1-86FA-A281-9641B3B29A76">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>CHECK_IN</sourceObjSchema>
+<sourceObjName>NUMERO_VUELO</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>20 BYTE</dataTypeSize>
+<ownDataTypeParameters>20 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="AEROLINEA" id="158A6ACB-880B-E208-9EA2-3C5DA550FBF8">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>CHECK_IN</sourceObjSchema>
+<sourceObjName>AEROLINEA</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>100 BYTE</dataTypeSize>
+<ownDataTypeParameters>100 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+<Column name="DESTINO" id="D62C5E74-A250-8DEB-3F73-B4B3C77D8E6A">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>CHECK_IN</sourceObjSchema>
+<sourceObjName>DESTINO</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<nullsAllowed>true</nullsAllowed>
+<useDomainConstraints>false</useDomainConstraints>
+<use>1</use>
+<logicalDatatype>LOGDT024</logicalDatatype>
+<dataTypeSize>100 BYTE</dataTypeSize>
+<ownDataTypeParameters>100 BYTE,,</ownDataTypeParameters>
+<autoIncrementCycle>false</autoIncrementCycle>
+</Column>
+</columns>
+<indexes itemClass="oracle.dbtools.crest.model.design.relational.Index">
+<ind_PK_UK id="AFAA68D6-AF48-2F8E-4876-BF8908D7E93D" name="PK_CHECK_IN">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PK_CHECK_IN</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<pk>true</pk>
+<indexState>Primary Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="34639932-F318-AFCE-14A0-708F4289C5DF"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="92C6D0A3-09AD-6353-5A7F-0DB49C759AC4" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="CHECK_IN_ID_RESERVA_UN">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>SYS_C008875</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<indexState>Unique Constraint</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="057134EC-C44F-E102-3FCE-A955DC9B712B"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="8F4E60D9-342F-D423-A9E2-77C2C14A7749" schemaObject="E0823C64-940F-EC6C-6FA5-09F263E8EAD4" name="PK_CHECK_IN">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>PK_CHECK_IN</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<indexState>Unique Plain Index</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="34639932-F318-AFCE-14A0-708F4289C5DF"/>
+</indexColumnUsage>
+</ind_PK_UK>
+<ind_PK_UK id="97384D3D-1302-F13D-F61E-C3970EDB5E14" name="FK_CHECK_IN_RESERVA">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<indexState>Foreign Key</indexState>
+<isSurrogateKey>false</isSurrogateKey>
+<indexColumnUsage>
+<colUsage columnID="057134EC-C44F-E102-3FCE-A955DC9B712B"/>
+</indexColumnUsage>
+</ind_PK_UK>
+</indexes>
+</Table>

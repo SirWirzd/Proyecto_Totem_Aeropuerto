@@ -1,0 +1,91 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<TableProxyOraclev11g class="oracle.dbtools.crest.model.design.storage.oracle.v11g.TableProxyOraclev11g" name="RESERVA" directorySegmentName="seg_0" id="5168A517-0CCB-5120-8AB2-70DA0F730D76">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<schemaObject>E0823C64-940F-EC6C-6FA5-09F263E8EAD4</schemaObject>
+<logging>YES</logging>
+<partitionedRowMovement>DISABLE</partitionedRowMovement>
+<segment>44E5BADC-D4B6-C1E5-AF26-65157BB3B254</segment>
+<tableSpace>3C75C005-2C80-9D14-D278-6E0DBDB38C64</tableSpace>
+<temporaryChanged>false</temporaryChanged>
+<accessDriverType>oracle_loader</accessDriverType>
+<rejectLimit></rejectLimit>
+<columnProxies itemClass="oracle.dbtools.crest.model.design.storage.oracle.v12c.ColumnProxyOraclev12c">
+<ColumnProxy name="FECHA_HORA_RESERVA" id="2CC24E95-185B-95DA-BD2A-A5D340C0F070">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="MOTIVO_VIAJE" id="5292B47B-4354-C4A5-370B-57C82E06AED0">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ID_PASAJERO" id="58233924-57D5-1F18-2007-5F9695FC5250">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ID_VUELO" id="9717AD0D-675E-1FEB-A116-1C355F9F4C3D">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ESTADO" id="BFF0633E-9850-BC08-5A8A-7489661ED582">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ASIENTOS" id="D09650AF-37E1-1660-30A0-4A3D7F523AC5">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="ID_RESERVA" id="DE4BFE27-999D-BBB3-5062-3BAFE10A2ABE">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+<ColumnProxy name="TIPO_BOLETO" id="E7A0AB41-8F9A-935C-907B-ACF882A8C705">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ColumnProxy>
+</columnProxies>
+<indexProxies>
+<IndexProxy class="oracle.dbtools.crest.model.design.storage.oracle.v10g.IndexProxyOraclev10g" name="PK_RESERVA" id="C7C50E92-953F-04AF-8EB1-4A625A5D96E2">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<schemaObject>E0823C64-940F-EC6C-6FA5-09F263E8EAD4</schemaObject>
+<segment>C0E8B4DE-1170-DB61-5ED1-138C09AD5520</segment>
+<tableSpace>3C75C005-2C80-9D14-D278-6E0DBDB38C64</tableSpace>
+</IndexProxy>
+</indexProxies>
+<foreignKeys>
+<ForeignKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.FKProxyOraclev10g" name="FK_RESERVA_VUELO" id="5841557F-AED6-A754-391C-BA871669EA62">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ForeignKey>
+<ForeignKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.FKProxyOraclev10g" name="FK_RESERVA_PASAJERO" id="CA747240-A8C5-51C3-21C8-339FC2C19D09">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+</ForeignKey>
+</foreignKeys>
+<primaryKeys>
+<PrimaryKey class="oracle.dbtools.crest.model.design.storage.oracle.v10g.PKProxyOraclev10g" name="PK_RESERVA" id="5F2F01A7-3F30-F180-E11B-4B94935E420B">
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<segment>C0E8B4DE-1170-DB61-5ED1-138C09AD5520</segment>
+<tableSpace>3C75C005-2C80-9D14-D278-6E0DBDB38C64</tableSpace>
+<existingIndex>C7C50E92-953F-04AF-8EB1-4A625A5D96E2</existingIndex>
+<indexSegment>C0E8B4DE-1170-DB61-5ED1-138C09AD5520</indexSegment>
+<indexSort>SORTED</indexSort>
+<usingIndex>BY INDEX NAME</usingIndex>
+</PrimaryKey>
+</primaryKeys>
+</TableProxyOraclev11g>

@@ -1,0 +1,19 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<FKIndexAssociation class="oracle.dbtools.crest.model.design.relational.FKIndexAssociation" directorySegmentName="seg_0" id="B60A698D-0028-C233-F7F9-5280C25CB85B" containerWithKeyObject="9FE9A58F-3F4C-96F2-26C2-7FE0B38F8F61" localFKIndex="ABA1AB59-D1D0-5071-462F-A2F4F11AC958" name="FK_PUERTA_TERMINAL">
+<sourceConnName>DB_Totem</sourceConnName>
+<sourceObjSchema>ADMIN</sourceObjSchema>
+<sourceObjName>FK_PUERTA_TERMINAL</sourceObjName>
+<createdBy>choco</createdBy>
+<createdTime>2024-11-25 13:34:03 UTC</createdTime>
+<ownerDesignName>Modelo_Relacional</ownerDesignName>
+<referredTableLongName>ADMIN.TERMINAL_AEROPUERTO</referredTableLongName>
+<deleteRule>CASCADE</deleteRule>
+<referredTableID>5EEEA881-4430-758F-EA96-05221A6F1639</referredTableID>
+<keyObject>73B43062-7A40-5354-816E-C4B1E1C708A9</keyObject>
+<referredKeyID>73B43062-7A40-5354-816E-C4B1E1C708A9</referredKeyID>
+<mandatory>true</mandatory>
+<refColNames>ID_TERMINAL</refColNames>
+<transferable>true</transferable>
+<rely>false</rely>
+<columnDependencyConstraintGenerateInDDL>true</columnDependencyConstraintGenerateInDDL>
+</FKIndexAssociation>
