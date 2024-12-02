@@ -4,7 +4,6 @@
 -- Integrante: 
 -- Gianfranco Astorga
 -- Ernesto Starck
--- Sebastián Bustamante
 -- David Ñanculeo
 
 -- Creación del usuario en Oracle
@@ -13,792 +12,207 @@ CREATE USER admin IDENTIFIED BY admin;
 GRANT ALL PRIVILEGES TO admin;
 
 -- Eliminación de tablas si existen previamente
-DROP TABLE DOCUMENTO_EMBARQUE CASCADE CONSTRAINTS;
+
 DROP TABLE CHECK_IN CASCADE CONSTRAINTS;
-DROP TABLE RESERVA CASCADE CONSTRAINTS;
+DROP TABLE ASISTENCIA CASCADE CONSTRAINTS;
+DROP TABLE EQUIPAJE CASCADE CONSTRAINTS;
+DROP TABLE SERVICIOS_ADICIONALES CASCADE CONSTRAINTS;
+DROP TABLE BOLETO CASCADE CONSTRAINTS;
 DROP TABLE VUELO CASCADE CONSTRAINTS;
 DROP TABLE PASAJERO CASCADE CONSTRAINTS;
-DROP TABLE EQUIPAJE CASCADE CONSTRAINTS;
 DROP TABLE AVION CASCADE CONSTRAINTS;
-DROP TABLE AEROLINEA CASCADE CONSTRAINTS;
 DROP TABLE PUERTA CASCADE CONSTRAINTS;
-DROP TABLE TERMINAL_AEROPUERTO CASCADE CONSTRAINTS;
+DROP TABLE TERMINAL_PUERTA CASCADE CONSTRAINTS;
 DROP TABLE AEROPUERTO CASCADE CONSTRAINTS;
+DROP TABLE AEROLINEA CASCADE CONSTRAINTS;
 DROP TABLE PAIS CASCADE CONSTRAINTS;
+DROP TABLE TIPO_EQUIPAJE CASCADE CONSTRAINTS;
+DROP TABLE TIPO_BOLETO CASCADE CONSTRAINTS;
+DROP TABLE ESTADO CASCADE CONSTRAINTS;
 
--- Tabla PAIS
+-- Creación de tablas
+
+-- Tabla Estado de Vuelo
+
+CREATE TABLE ESTADO (
+    id_estado NUMBER NOT NULL PRIMARY KEY,
+    nombre_estado VARCHAR2(50) UNIQUE NOT NULL
+);
+
+-- Tabla Tipo de Boleto
+
+CREATE TABLE TIPO_BOLETO (
+    id_tipo_boleto NUMBER NOT NULL PRIMARY KEY,
+    nombre_tipo_boleto VARCHAR2(50) UNIQUE NOT NULL
+);
+
+-- Tabla Tipo de Equipaje
+
+CREATE TABLE TIPO_EQUIPAJE (
+    id_tipo_equipaje NUMBER NOT NULL PRIMARY KEY,
+    nombre_tipo_equipaje VARCHAR2(50) UNIQUE NOT NULL
+);
+
+-- Tabla Pais
+
 CREATE TABLE PAIS (
-    id_pais NUMBER NOT NULL,
-    nombre VARCHAR2(100) NOT NULL,
-    visa_requerida VARCHAR2(20),
-    tipo_visa VARCHAR2(99),
-    pasaporte_requerido VARCHAR2(20),
-    CONSTRAINT PK_PAIS PRIMARY KEY (id_pais),
-    CONSTRAINT chck_visa_pais CHECK (visa_requerida IN ('Sí', 'No')),
-    CONSTRAINT chck_tipo_visa CHECK (visa_requerida = 'No' OR tipo_visa IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo')),
-    CONSTRAINT chck_pasaporte CHECK (pasaporte_requerido IN ('Sí', 'No'))
+    id_pais NUMBER NOT NULL PRIMARY KEY,
+    nombre_pais VARCHAR2(50) NOT NULL,
+    visa_requerida CHAR(1) CHECK (visa_requerida IN ('S', 'N')),
+    pasaporte_requerido CHAR(1) CHECK (pasaporte_requerido IN ('S', 'N'))
 );
 
--- Tabla AEROPUERTO
-CREATE TABLE AEROPUERTO (
-    id_aeropuerto NUMBER NOT NULL,
-    nombre VARCHAR2(100) NOT NULL,
-    pais_id NUMBER NOT NULL,
-    CONSTRAINT PK_AEROPUERTO PRIMARY KEY (id_aeropuerto),
-    CONSTRAINT FK_AEROPUERTO_CIUDAD FOREIGN KEY (pais_id) REFERENCES PAIS(id_pais) ON DELETE CASCADE
-);
+-- Tabla Aerolinea
 
--- Tabla TERMINAL_AEROPUERTO
-CREATE TABLE TERMINAL_AEROPUERTO (
-    id_terminal NUMBER NOT NULL,
-    nombre VARCHAR2(50) NOT NULL,
-    id_aeropuerto NUMBER NOT NULL,
-    CONSTRAINT PK_TERMINAL PRIMARY KEY (id_terminal),
-    CONSTRAINT FK_TERMINAL_AEROPUERTO FOREIGN KEY (id_aeropuerto) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE
-);
-
--- Tabla PUERTA
-CREATE TABLE PUERTA (
-    id_puerta NUMBER NOT NULL,
-    nombre VARCHAR2(50) NOT NULL,
-    id_terminal NUMBER NOT NULL,
-    CONSTRAINT PK_PUERTA PRIMARY KEY (id_puerta),
-    CONSTRAINT FK_PUERTA_TERMINAL FOREIGN KEY (id_terminal) REFERENCES TERMINAL_AEROPUERTO(id_terminal) ON DELETE CASCADE
-);
-
--- Tabla AEROLINEA
 CREATE TABLE AEROLINEA (
-    id_aerolinea NUMBER NOT NULL,
-    nombre_aerolinea VARCHAR2(100) NOT NULL,
-    CONSTRAINT PK_AEROLINEA PRIMARY KEY (id_aerolinea)
+    id_aerolinea NUMBER NOT NULL PRIMARY KEY,
+    nombre_aerolinea VARCHAR2(50) UNIQUE NOT NULL
 );
 
--- Tabla AVION
-CREATE OR REPLACE TYPE TIPO_ASIENTO IS VARRAY(5) OF VARCHAR2(10);
+-- Tabla Aeropuerto
+
+CREATE TABLE AEROPUERTO (
+    id_aeropuerto NUMBER NOT NULL PRIMARY KEY,
+    nombre_aeropuerto VARCHAR2(50) NOT NULL,
+    ciudad VARCHAR2(50) NOT NULL,
+    latitud NUMBER NOT NULL,
+    longitud NUMBER NOT NULL,
+    id_pais NUMBER NOT NULL,
+    CONSTRAINT fk_pais_aeropuerto FOREIGN KEY (id_pais) REFERENCES PAIS(id_pais) ON DELETE CASCADE,
+    CONSTRAINT ck_latitud_aeropuerto CHECK (latitud BETWEEN -90 AND 90),
+    CONSTRAINT ck_longitud_aeropuerto CHECK (longitud BETWEEN -180 AND 180)
+);
+
+-- Tabla Terminal de Aeropuerto
+
+CREATE TABLE TERMINAL_PUERTA (
+    id_terminal NUMBER NOT NULL PRIMARY KEY,
+    nombre_terminal VARCHAR2(50) NOT NULL,
+    id_aeropuerto NUMBER NOT NULL,
+    CONSTRAINT fk_aeropuerto_terminal FOREIGN KEY (id_aeropuerto) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE
+);
+
+-- Tabla Puerta de Embarque
+
+CREATE TABLE PUERTA (
+    id_puerta NUMBER NOT NULL PRIMARY KEY,
+    nombre_puerta VARCHAR2(50) NOT NULL,
+    id_terminal NUMBER NOT NULL,
+    CONSTRAINT fk_terminal_puerta FOREIGN KEY (id_terminal) REFERENCES TERMINAL_PUERTA(id_terminal) ON DELETE CASCADE
+);
+
+-- Tabla Avion de Aerolinea
 
 CREATE TABLE AVION (
-    id_avion NUMBER NOT NULL,
-    modelo VARCHAR2(50) NOT NULL,
+    id_avion NUMBER NOT NULL PRIMARY KEY,
+    nombre_avion VARCHAR2(50) NOT NULL,
     capacidad NUMBER NOT NULL,
     id_aerolinea NUMBER NOT NULL,
-    asientos TIPO_ASIENTO,
-    CONSTRAINT PK_AVION PRIMARY KEY (id_avion),
-    CONSTRAINT FK_AVION_AEROLINEA FOREIGN KEY (id_aerolinea) REFERENCES AEROLINEA(id_aerolinea) ON DELETE CASCADE
+    CONSTRAINT fk_aerolinea_avion FOREIGN KEY (id_aerolinea) REFERENCES AEROLINEA(id_aerolinea) ON DELETE CASCADE
 );
 
--- Tabla PASAJERO
+-- Tabla Pasajero de Vuelo
+
 CREATE TABLE PASAJERO (
-    id_pasajero NUMBER NOT NULL,
-    nombre VARCHAR2(100) NOT NULL,
-    apellido VARCHAR2(100) NOT NULL,
+    id_pasajero NUMBER NOT NULL PRIMARY KEY,
+    dni_pasajero CHAR(10) UNIQUE NOT NULL,
+    nombre_pasajero VARCHAR2(50) NOT NULL,
+    apellido_pasajero VARCHAR2(50) NOT NULL,
     fecha_nacimiento DATE NOT NULL,
-    correo_electronico VARCHAR2(100) NOT NULL,
-    telefono_pasajero VARCHAR2(99) NOT NULL,
-    documento_identidad VARCHAR2(20) NOT NULL,
-    asistencia VARCHAR2(20) CHECK (asistencia IN ('Sí', 'No')),
-    edad NUMBER,
-    CONSTRAINT PK_PASAJERO PRIMARY KEY (id_pasajero),
-    CONSTRAINT chck_telefono CHECK (telefono_pasajero LIKE '+%_____%')
+    pasaporte CHAR(10) UNIQUE NOT NULL,
+    visa CHAR(10) UNIQUE NOT NULL,
+    correo_pasajero VARCHAR2(50) UNIQUE NOT NULL,
+    telefono_pasajero CHAR(9) UNIQUE NOT NULL,
+    asistencia_especial CHAR(1) CHECK (asistencia_especial IN ('S', 'N')),
+    id_pais NUMBER NOT NULL,
+    CONSTRAINT fk_pais_pasajero FOREIGN KEY (id_pais) REFERENCES PAIS(id_pais) ON DELETE CASCADE
 );
 
--- Tabla EQUIPAJE
-CREATE TABLE EQUIPAJE (
-    id_equipaje NUMBER NOT NULL,
-    id_pasajero NUMBER NOT NULL, -- Relación directa con el pasajero
-    tipo_equipaje VARCHAR2(20) CHECK (tipo_equipaje IN ('Mano', 'De Bodega')) NOT NULL,
-    peso NUMBER NOT NULL,
-    descripcion VARCHAR2(100) NOT NULL,
-    alto NUMBER NOT NULL,
-    ancho NUMBER NOT NULL,
-    profundidad NUMBER NOT NULL,
-    cobro_extra NUMBER DEFAULT 0,
-    CONSTRAINT PK_EQUIPAJE PRIMARY KEY (id_equipaje),
-    CONSTRAINT FK_EQUIPAJE_PASAJERO FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE
-);
+-- Tabla Vuelo
 
--- Tabla VUELO
 CREATE TABLE VUELO (
-    id_vuelo NUMBER NOT NULL,
+    id_vuelo NUMBER NOT NULL PRIMARY KEY,
     id_aerolinea NUMBER NOT NULL,
-    id_avion NUMBER NOT NULL, -- Relación entre vuelo y avión
+    fecha_salida TIMESTAMP NOT NULL,
+    fecha_llegada TIMESTAMP NOT NULL,
+    id_estado NUMBER NOT NULL,
+    id_avion NUMBER NOT NULL,
+    id_terminal NUMBER NOT NULL,
+    id_puerta NUMBER NOT NULL,
     id_aeropuerto_origen NUMBER NOT NULL,
     id_aeropuerto_destino NUMBER NOT NULL,
-    fecha_hora_salida TIMESTAMP NOT NULL,
-    fecha_hora_llegada TIMESTAMP NOT NULL,
-    duracion NUMBER NOT NULL,
-    distancia NUMBER NOT NULL,
-    estado VARCHAR2(20) CHECK (estado IN ('Programado', 'En vuelo', 'Aterrizado', 'Cancelado')),
-    CONSTRAINT PK_VUELO PRIMARY KEY (id_vuelo),
-    CONSTRAINT FK_VUELO_AEROLINEA FOREIGN KEY (id_aerolinea) REFERENCES AEROLINEA(id_aerolinea) ON DELETE CASCADE,
-    CONSTRAINT FK_VUELO_AEROPUERTO_ORIGEN FOREIGN KEY (id_aeropuerto_origen) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE,
-    CONSTRAINT FK_VUELO_AEROPUERTO_DESTINO FOREIGN KEY (id_aeropuerto_destino) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE,
-    CONSTRAINT FK_VUELO_AVION FOREIGN KEY (id_avion) REFERENCES AVION(id_avion) ON DELETE CASCADE
+    duracion GENERATED ALWAYS AS (EXTRACT(HOUR FROM (fecha_llegada - fecha_salida))) VIRTUAL,
+    CONSTRAINT fk_aerolinea_vuelo FOREIGN KEY (id_aerolinea) REFERENCES AEROLINEA(id_aerolinea) ON DELETE CASCADE,
+    CONSTRAINT fk_estado_vuelo FOREIGN KEY (id_estado) REFERENCES ESTADO(id_estado) ON DELETE CASCADE,
+    CONSTRAINT fk_avion_vuelo FOREIGN KEY (id_avion) REFERENCES AVION(id_avion) ON DELETE CASCADE,
+    CONSTRAINT fk_terminal_vuelo FOREIGN KEY (id_terminal) REFERENCES TERMINAL_PUERTA(id_terminal) ON DELETE CASCADE,
+    CONSTRAINT fk_puerta_vuelo FOREIGN KEY (id_puerta) REFERENCES PUERTA(id_puerta) ON DELETE CASCADE,
+    CONSTRAINT fk_aeropuerto_origen_vuelo FOREIGN KEY (id_aeropuerto_origen) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE,
+    CONSTRAINT fk_aeropuerto_destino_vuelo FOREIGN KEY (id_aeropuerto_destino) REFERENCES AEROPUERTO(id_aeropuerto) ON DELETE CASCADE
 );
 
--- Tabla RESERVA (con una única restricción de unicidad en id_pasajero e id_vuelo)
-CREATE TABLE RESERVA (
-    id_reserva NUMBER NOT NULL,
+-- Tabla Boleto de Vuelo
+
+CREATE TABLE BOLETO (
+    id_boleto NUMBER NOT NULL PRIMARY KEY,
     id_pasajero NUMBER NOT NULL,
     id_vuelo NUMBER NOT NULL,
-    asientos TIPO_ASIENTO, -- VARRAY para los asientos asignados
-    fecha_hora_reserva TIMESTAMP NOT NULL,
-    motivo_viaje VARCHAR2(100) NOT NULL CHECK (motivo_viaje IN ('Turismo', 'Negocios', 'Estudio', 'Trabajo')),
-    tipo_boleto VARCHAR2(50) NOT NULL CHECK (tipo_boleto IN ('Económico', 'Ejecutivo', 'Primera Clase')),
-    estado VARCHAR2(20) NOT NULL CHECK (estado IN ('Confirmada', 'Cancelado', 'Pendiente')),
-    CONSTRAINT PK_RESERVA PRIMARY KEY (id_reserva),
-    CONSTRAINT FK_RESERVA_PASAJERO FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
-    CONSTRAINT FK_RESERVA_VUELO FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE
+    id_tipo_boleto NUMBER NOT NULL,
+    precio NUMBER NOT NULL CHECK (precio > 0),
+    CONSTRAINT fk_pasajero_boleto FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
+    CONSTRAINT fk_vuelo_boleto FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
+    CONSTRAINT fk_tipo_boleto_boleto FOREIGN KEY (id_tipo_boleto) REFERENCES TIPO_BOLETO(id_tipo_boleto) ON DELETE CASCADE
 );
 
--- Tabla CHECK_IN - Relación 1 a 1 con RESERVA
+-- Tabla de Servicios Adicionales
+
+CREATE TABLE SERVICIOS_ADICIONALES (
+    id_servicio NUMBER NOT NULL PRIMARY KEY,
+    id_boleto NUMBER NOT NULL,
+    nombre_servicio VARCHAR2(50) NOT NULL,
+    precio NUMBER NOT NULL CHECK (precio > 0),
+    CONSTRAINT fk_boleto_servicio FOREIGN KEY (id_boleto) REFERENCES BOLETO(id_boleto) ON DELETE CASCADE
+);
+
+-- Tabla Equipaje de Pasajero
+
+CREATE TABLE EQUIPAJE (
+    id_equipaje NUMBER NOT NULL PRIMARY KEY,
+    id_pasajero NUMBER NOT NULL,
+    id_vuelo NUMBER NOT NULL,
+    id_tipo_equipaje NUMBER NOT NULL,
+    peso NUMBER NOT NULL,
+    alto NUMBER NOT NULL,
+    ancho NUMBER NOT NULL,
+    largo NUMBER NOT NULL,
+    precio NUMBER NOT NULL CHECK (precio > 0),
+    CONSTRAINT fk_pasajero_equipaje FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
+    CONSTRAINT fk_vuelo_equipaje FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
+    CONSTRAINT fk_tipo_equipaje_equipaje FOREIGN KEY (id_tipo_equipaje) REFERENCES TIPO_EQUIPAJE(id_tipo_equipaje) ON DELETE CASCADE,
+    CONSTRAINT ck_dimensiones_equipaje CHECK (peso >0 AND alto > 0 AND ancho > 0 AND largo > 0)
+);
+
+-- Tabla Asistencia Especial
+
+CREATE TABLE ASISTENCIA (
+    id_asistencia NUMBER NOT NULL PRIMARY KEY,
+    id_pasajero NUMBER NOT NULL,
+    id_vuelo NUMBER NOT NULL,
+    nombre_asistencia VARCHAR2(50) NOT NULL,
+    precio NUMBER NOT NULL CHECK (precio > 0),
+    CONSTRAINT fk_pasajero_asistencia FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
+    CONSTRAINT fk_vuelo_asistencia FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE
+);
+
+-- Tabla CHECK-IN
+
 CREATE TABLE CHECK_IN (
-    id_check_in NUMBER NOT NULL,
-    id_reserva NUMBER NOT NULL UNIQUE,
-    fecha_hora_check_in TIMESTAMP NOT NULL,
-    estado VARCHAR2(20) NOT NULL CHECK (estado IN ('Completado', 'Cancelado', 'Pendiente')),
-    tipo_check_in VARCHAR2(20) NOT NULL CHECK (tipo_check_in IN ('Presencial', 'Online')),
-    numero_asientos TIPO_ASIENTO, -- Asientos asignados para el check-in
-    numero_vuelo VARCHAR2(20),
-    aerolinea VARCHAR2(100),
-    destino VARCHAR2(100),
-    CONSTRAINT PK_CHECK_IN PRIMARY KEY (id_check_in),
-    CONSTRAINT FK_CHECK_IN_RESERVA FOREIGN KEY (id_reserva) REFERENCES RESERVA(id_reserva) ON DELETE CASCADE
+    id_checkin NUMBER NOT NULL PRIMARY KEY,
+    id_pasajero NUMBER NOT NULL,
+    id_vuelo NUMBER NOT NULL,
+    fecha_checkin TIMESTAMP NOT NULL,
+    CONSTRAINT fk_pasajero_checkin FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
+    CONSTRAINT fk_vuelo_checkin FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
+    CONSTRAINT uq_pasajero_vuelo_checkin UNIQUE (id_pasajero, id_vuelo)
 );
--- Cambiar formato de la fecha
 
-ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'DD-MM-YYYY HH24:MI:SS';
-
-
--- ======================
--- 1. Validación de Equipaje
--- ======================
-
--- Trigger para validar el tamaño y peso del equipaje y aplicar un cobro extra
-CREATE OR REPLACE TRIGGER VALIDAR_EQUIPAJE
-BEFORE INSERT OR UPDATE ON EQUIPAJE
-FOR EACH ROW
-BEGIN
-    :NEW.cobro_extra := 0;
-    IF :NEW.tipo_equipaje = 'Mano' THEN
-        IF :NEW.alto > 55 OR :NEW.ancho > 35 OR :NEW.profundidad > 25 THEN
-            :NEW.cobro_extra := 22000;
-        END IF;
-        IF :NEW.peso > 10 THEN
-            :NEW.cobro_extra := :NEW.cobro_extra + 25000;
-        END IF;
-    ELSIF :NEW.tipo_equipaje = 'De Bodega' THEN
-        IF :NEW.alto > 80 OR :NEW.ancho > 50 OR :NEW.profundidad > 30 THEN
-            :NEW.cobro_extra := 45000;
-        END IF;
-        IF :NEW.peso > 23 THEN
-            :NEW.cobro_extra := :NEW.cobro_extra + 50000;
-        END IF;
-    END IF;
-END;
-/
-
--- Trigger para limitar el número de equipajes por pasajero
-CREATE OR REPLACE TRIGGER LIMITE_EQUIPAJES_POR_PASAJERO
-BEFORE INSERT ON EQUIPAJE
-FOR EACH ROW
-DECLARE
-    v_numero_equipajes NUMBER;
-    v_limite_equipajes CONSTANT NUMBER := 2; -- Límite de equipajes por pasajero
-BEGIN
-    -- Contar los equipajes ya registrados para el pasajero
-    SELECT COUNT(*)
-    INTO v_numero_equipajes
-    FROM EQUIPAJE
-    WHERE id_pasajero = :NEW.id_pasajero;
-
-    -- Verificar si se excede el límite de equipajes
-    IF v_numero_equipajes > v_limite_equipajes THEN
-        RAISE_APPLICATION_ERROR(-20006, 'El pasajero ha excedido el límite permitido de equipajes.');
-    END IF;
-END;
-/
-
--- ======================
--- 2. Verificación de Documentos y Asistencia
--- ======================
-
--- Trigger para verificar y actualizar asistencia para pasajeros menores de edad
-CREATE OR REPLACE TRIGGER ASISTENCIA_MENOR_EDAD
-BEFORE INSERT OR UPDATE ON PASAJERO
-FOR EACH ROW
-BEGIN
-    IF :NEW.edad < 18 THEN
-        IF :NEW.asistencia IS NULL OR :NEW.asistencia = 'No' THEN
-            :NEW.asistencia := 'Sí';
-        END IF;
-        IF :NEW.asistencia = 'No' THEN
-            RAISE_APPLICATION_ERROR(-20008, 'El pasajero es menor de edad y requiere un asistente o acompañante para volar.');
-        END IF;
-    END IF;
-END;
-/
-
--- Trigger para verificar la visa según el país de destino
-CREATE OR REPLACE TRIGGER TRG_VERIFICAR_VISA
-BEFORE INSERT ON RESERVA
-FOR EACH ROW
-DECLARE
-    v_visa_requerida VARCHAR2(20);
-    v_tipo_visa VARCHAR2(99);
-BEGIN
-    SELECT p.visa_requerida, p.tipo_visa
-    INTO v_visa_requerida, v_tipo_visa
-    FROM PAIS p
-    JOIN AEROPUERTO a ON a.pais_id = p.id_pais
-    JOIN VUELO v ON v.id_aeropuerto_destino = a.id_aeropuerto
-    WHERE v.id_vuelo = :NEW.id_vuelo;
-    IF v_visa_requerida = 'Sí' AND v_tipo_visa IS NULL THEN
-        RAISE_APPLICATION_ERROR(-20002, 'El país de destino requiere especificar el tipo de visa para el pasajero.');
-    END IF;
-END;
-/
-
--- Trigger para verificar el pasaporte según el país de destino
-CREATE OR REPLACE TRIGGER TRG_VERIFICAR_PASAPORTE
-BEFORE INSERT ON RESERVA
-FOR EACH ROW
-DECLARE
-    v_pasaporte_requerido VARCHAR2(20);
-    v_pasaporte_pasajero VARCHAR2(20);
-BEGIN
-    SELECT p.pasaporte_requerido
-    INTO v_pasaporte_requerido
-    FROM PAIS p
-    JOIN AEROPUERTO a ON a.pais_id = p.id_pais
-    JOIN VUELO v ON v.id_aeropuerto_destino = a.id_aeropuerto
-    WHERE v.id_vuelo = :NEW.id_vuelo;
-    SELECT documento_identidad
-    INTO v_pasaporte_pasajero
-    FROM PASAJERO
-    WHERE id_pasajero = :NEW.id_pasajero;
-    IF v_pasaporte_requerido = 'Sí' AND v_pasaporte_pasajero = 'No' THEN
-        RAISE_APPLICATION_ERROR(-20003, 'El país de destino requiere que el pasajero tenga pasaporte.');
-    END IF;
-END;
-/
-
--- Validación de Identidad en PASAJERO para asegurar unicidad en documento de identidad y correo
-CREATE OR REPLACE TRIGGER VALIDAR_UNICIDAD_PASAJERO
-BEFORE INSERT ON PASAJERO
-FOR EACH ROW
-DECLARE
-    v_count NUMBER;
-BEGIN
-    SELECT COUNT(*)
-    INTO v_count
-    FROM PASAJERO
-    WHERE documento_identidad = :NEW.documento_identidad OR correo_electronico = :NEW.correo_electronico;
-
-    IF v_count > 0 THEN
-        RAISE_APPLICATION_ERROR(-20034, 'Ya existe un pasajero con el mismo documento de identidad o correo.');
-    END IF;
-END;
-/
-
--- ======================
--- 3. Gestión de Estado de Vuelos
--- ======================
-
--- Trigger para actualizar el estado del vuelo a "En vuelo", "Aterrizado" o "Programado"
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_VUELO_TIEMPO
-AFTER INSERT OR UPDATE ON VUELO
-FOR EACH ROW
-BEGIN
-    IF :NEW.fecha_hora_salida <= SYSDATE AND :NEW.fecha_hora_llegada > SYSDATE THEN
-        UPDATE VUELO
-        SET estado = 'En vuelo'
-        WHERE id_vuelo = :NEW.id_vuelo;
-    ELSIF :NEW.fecha_hora_llegada <= SYSDATE THEN
-        UPDATE VUELO
-        SET estado = 'Aterrizado'
-        WHERE id_vuelo = :NEW.id_vuelo;
-    ELSE
-        UPDATE VUELO
-        SET estado = 'Programado'
-        WHERE id_vuelo = :NEW.id_vuelo;
-    END IF;
-END;
-/
-
--- Trigger para actualizar la duración del vuelo automáticamente
-CREATE OR REPLACE TRIGGER TRG_VERIFICAR_DURACION
-BEFORE INSERT OR UPDATE ON VUELO
-FOR EACH ROW
-BEGIN
-    :NEW.duracion := (CAST(:NEW.fecha_hora_llegada AS DATE) - CAST(:NEW.fecha_hora_salida AS DATE)) * 24;
-END;
-/
-
--- Trigger para actualizar el estado del vuelo a "Cancelado" si una reserva es cancelada
-CREATE OR REPLACE TRIGGER ESTADO_VUELO_CANCELADO
-AFTER UPDATE ON RESERVA
-FOR EACH ROW
-BEGIN
-    IF (:NEW.estado = 'Cancelado') THEN
-        UPDATE VUELO
-        SET estado = 'Cancelado' 
-        WHERE id_vuelo = :NEW.id_vuelo;
-    END IF;
-END;
-/
-
--- Trigger para restringir la actualización de la fecha de salida de un vuelo si faltan menos de 24 horas
-CREATE OR REPLACE TRIGGER ACTUALIZACION_FECHA_VUELO
-BEFORE UPDATE OF fecha_hora_salida ON VUELO
-FOR EACH ROW
-BEGIN
-    IF :OLD.fecha_hora_salida - INTERVAL '1' DAY < SYSDATE THEN
-        RAISE_APPLICATION_ERROR(-20013, 'No se permite actualizar la fecha de salida ya que faltan menos de 24 horas para el vuelo.');
-    END IF;
-END;
-/
-
--- ======================
--- 4. Gestión de Asientos y Puertas
--- ======================
-
--- Trigger para validar de asientos 
-
-CREATE OR REPLACE TRIGGER VALIDAR_ASIENTO
-BEFORE INSERT OR UPDATE ON ASIENTO
-FOR EACH ROW
-BEGIN
-    IF :NEW.numero_asiento IS NULL THEN
-        RAISE_APPLICATION_ERROR(-20010, 'El número de asiento no puede ser nulo.');
-    END IF;
-    IF :NEW.estado IS NULL THEN
-        RAISE_APPLICATION_ERROR(-20011, 'El estado del asiento no puede ser nulo.');
-    END IF;
-    IF :NEW.estado NOT IN ('Disponible', 'No disponible') THEN
-        RAISE_APPLICATION_ERROR(-20012, 'El estado del asiento debe ser "Disponible" o "No disponible".');
-    END IF;
-END;
-/
-
--- Trigger para crear asientos automáticamente al registrar un avión
-
-CREATE OR REPLACE TRIGGER CREAR_ASIENTOS_AVION
-BEFORE INSERT ON AVION
-FOR EACH ROW
-BEGIN
-    :NEW.asientos := TIPO_ASIENTO();
-    FOR i IN 1..5 LOOP
-        :NEW.asientos.EXTEND;
-        :NEW.asientos(i) := 'Disponible';
-    END LOOP;
-END;
-/
-
--- Trigger para verificar la disponibilidad de asientos al asignar vuelos
-
-CREATE OR REPLACE TRIGGER VALIDAR_DISPONIBILIDAD_ASIENTO
-BEFORE INSERT OR UPDATE ON RESERVA
-FOR EACH ROW
-DECLARE
-    v_asiento_disponible BOOLEAN := FALSE;
-BEGIN
-    FOR i IN 1..:NEW.asientos.COUNT LOOP
-        IF :NEW.asientos(i) = 'Disponible' THEN
-            v_asiento_disponible := TRUE;
-            EXIT;
-        END IF;
-    END LOOP;
-    IF NOT v_asiento_disponible THEN
-        RAISE_APPLICATION_ERROR(-20009, 'No hay asientos disponibles.');
-    END IF;
-END;
-
-
--- Trigger para verificar la disponibilidad de puertas al asignar vuelos
-
-CREATE OR REPLACE TRIGGER VALIDAR_DISPONIBILIDAD_PUERTA
-BEFORE INSERT OR UPDATE ON VUELO
-FOR EACH ROW
-DECLARE
-    v_puerta_ocupada NUMBER;
-BEGIN
-    SELECT COUNT(*)
-    INTO v_puerta_ocupada
-    FROM VUELO
-    WHERE id_aeropuerto_destino = :NEW.id_aeropuerto_destino
-      AND fecha_hora_salida < :NEW.fecha_hora_llegada
-      AND fecha_hora_llegada > :NEW.fecha_hora_salida
-      AND id_vuelo != :NEW.id_vuelo;
-    IF v_puerta_ocupada > 0 THEN
-        RAISE_APPLICATION_ERROR(-20007, 'La puerta seleccionada ya está ocupada por otro vuelo en este intervalo de tiempo.');
-    END IF;
-END;
-/
-
--- ======================
--- 5. Gestión de Estado de Reservas
--- ======================
-
--- Trigger para actualizar el estado de la reserva automáticamente
-CREATE OR REPLACE TRIGGER ACTUALIZAR_ESTADO_RESERVA
-AFTER INSERT OR UPDATE ON RESERVA
-FOR EACH ROW
-BEGIN
-    IF (:NEW.fecha_hora_reserva < SYSDATE) THEN
-        UPDATE RESERVA
-        SET estado = 'Confirmada' 
-        WHERE id_reserva = :NEW.id_reserva;
-    END IF;
-END;
-/
-
--- Trigger para controlar disponibilidad de vuelos
-
-CREATE OR REPLACE TRIGGER VALIDAR_MODIFICACION_RESERVA
-BEFORE UPDATE ON RESERVA
-FOR EACH ROW
-DECLARE
-    v_estado_vuelo VARCHAR2(20);
-BEGIN
-    SELECT estado INTO v_estado_vuelo FROM VUELO WHERE id_vuelo = :NEW.id_vuelo;
-    IF v_estado_vuelo != 'Programado' THEN
-        RAISE_APPLICATION_ERROR(-20031, 'Solo se pueden modificar reservas en vuelos programados.');
-    END IF;
-END;
-/
-
--- ======================
--- Procedimientos
--- ======================
-
--- Procedimiento para realizar el check-in de un pasajero
-
-CREATE OR REPLACE PROCEDURE proc_realizar_check_in (
-    p_id_reserva NUMBER,
-    p_documento_identidad VARCHAR2,
-    p_id_asiento TIPO_ASIENTO,
-    p_peso_equipaje NUMBER
-) IS
-    v_id_pasajero NUMBER;
-    v_documento_valido BOOLEAN := FALSE;
-    v_nuevo_id_check_in NUMBER;
-BEGIN
-    -- Verificación del ID de reserva
-    SELECT id_pasajero
-    INTO v_id_pasajero
-    FROM RESERVA
-    WHERE id_reserva = p_id_reserva;
-
-    -- Validación del formato del documento de identidad (RUN o pasaporte)
-    IF p_documento_identidad IS NOT NULL THEN
-        IF REGEXP_LIKE (p_documento_identidad, '^[0-9]{8}-[0-9Kk]{1}$') OR REGEXP_LIKE (p_documento_identidad, '^[A-Za-z]{1}[0-9]{5,9}$') THEN 
-            v_documento_valido := TRUE;
-        ELSE
-            RAISE_APPLICATION_ERROR(-20001, 'Documento de identidad inválido.');
-        END IF;
-    END IF;
-
-    -- Verificación del peso del equipaje
-    IF p_peso_equipaje > 23 THEN
-        RAISE_APPLICATION_ERROR(-20004, 'El peso del equipaje excede el límite permitido. Por favor, pague una multa o reduzca el peso.');
-    END IF;
-
-    -- Obtener un nuevo ID para CHECK_IN
-    SELECT NVL(MAX(id_check_in), 0) + 1 INTO v_nuevo_id_check_in FROM CHECK_IN;
-
-    -- Inserción en la tabla de CHECK_IN
-    INSERT INTO CHECK_IN (
-        id_check_in, id_reserva, fecha_hora_check_in, estado, tipo_check_in
-    ) VALUES (
-        v_nuevo_id_check_in, p_id_reserva, SYSDATE, 'Completado', 
-        CASE 
-            WHEN p_documento_identidad IS NOT NULL THEN 'Presencial' 
-            ELSE 'Online' 
-        END
-    );
-
-    COMMIT;
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20005, 'Pasajero o reserva no encontrada.');
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
-END;
-/
-
--- Procedimiento para asignar un asiento específico a una reserva
-
-CREATE OR REPLACE PROCEDURE asignar_asiento (
-    p_id_reserva IN NUMBER,
-    p_asiento IN VARCHAR2
-) IS
-    v_id_vuelo NUMBER;
-    v_asientos TIPO_ASIENTO;
-    v_asiento_disponible BOOLEAN := FALSE;
-BEGIN
-    -- Obtener el ID del vuelo de la reserva
-    SELECT id_vuelo
-    INTO v_id_vuelo
-    FROM RESERVA
-    WHERE id_reserva = p_id_reserva;
-
-    -- Obtener los asientos del avión
-    SELECT asientos
-    INTO v_asientos
-    FROM AVION a
-    JOIN VUELO v ON a.id_avion = v.id_avion
-    WHERE v.id_vuelo = v_id_vuelo;
-
-    -- Verificar si el asiento está disponible
-    FOR i IN 1..v_asientos.COUNT LOOP
-        IF v_asientos(i) = p_asiento AND v_asientos(i) = 'Disponible' THEN
-            v_asiento_disponible := TRUE;
-            EXIT;
-        END IF;
-    END LOOP;
-
-    IF v_asiento_disponible THEN
-        -- Actualizar la reserva con el asiento asignado
-        UPDATE RESERVA
-        SET asientos = TIPO_ASIENTO(p_asiento)
-        WHERE id_reserva = p_id_reserva;
-
-        COMMIT;
-    ELSE
-        RAISE_APPLICATION_ERROR(-20018, 'El asiento seleccionado no está disponible.');
-    END IF;
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20019, 'Reserva no encontrada.');
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
-END;
-/
-
--- Procedimiento para notificar a los pasajeros de un cambio de puerta de embarque
-CREATE OR REPLACE PROCEDURE notificar_cambio_puerta (
-    p_id_vuelo IN NUMBER,
-    p_id_pasajero IN NUMBER
-) IS
-    v_nombre VARCHAR2(100);
-    v_telefono_pasajero VARCHAR2(20);
-    v_puerta NUMBER;
-BEGIN
-    -- Obtener los datos del pasajero y la nueva puerta de embarque del vuelo
-    SELECT p.nombre, p.telefono_pasajero, pt.id_puerta
-    INTO v_nombre, v_telefono_pasajero, v_puerta
-    FROM PASAJERO p
-    JOIN RESERVA r ON p.id_pasajero = r.id_pasajero
-    JOIN VUELO v ON r.id_vuelo = v.id_vuelo
-    JOIN PUERTA pt ON pt.id_terminal = (SELECT id_terminal FROM TERMINAL_AEROPUERTO WHERE id_aeropuerto = v.id_aeropuerto_destino)
-    WHERE v.id_vuelo = p_id_vuelo
-      AND p.id_pasajero = p_id_pasajero;
-
-    -- Simulación de notificación al pasajero (mensaje de texto)
-    RAISE_APPLICATION_ERROR(-20015,
-        'Estimado ' || v_nombre || ', su puerta de embarque ha sido cambiada a la puerta ' || v_puerta || '. Gracias.');
-END;
-/
-
--- Procedimiento para informar sobre el retraso de un vuelo
-CREATE OR REPLACE PROCEDURE notificar_retraso_vuelo (
-    p_id_vuelo IN NUMBER,
-    p_id_pasajero IN NUMBER,
-    p_nueva_hora_salida TIMESTAMP
-) IS
-    v_nombre VARCHAR2(100);
-    v_telefono_pasajero VARCHAR2(20);
-BEGIN
-    -- Obtener los datos del pasajero
-    SELECT nombre, telefono_pasajero
-    INTO v_nombre, v_telefono_pasajero
-    FROM PASAJERO
-    WHERE id_pasajero = p_id_pasajero;
-
-    -- Simulación de notificación al pasajero sobre el retraso del vuelo
-    RAISE_APPLICATION_ERROR(-20016,
-        'Estimado ' || v_nombre || ', su vuelo ha sido retrasado. La nueva hora de salida es ' || TO_CHAR(p_nueva_hora_salida, 'DD-MM-YYYY HH24:MI') || '. Gracias.');
-END;
-/
-
--- Procedimiento para Cancelar una Reserva
-CREATE OR REPLACE PROCEDURE cancelar_reserva (
-    p_id_reserva NUMBER
-) IS
-BEGIN
-    -- Actualizar el estado de la reserva a 'Cancelado'
-    UPDATE RESERVA
-    SET estado = 'Cancelado'
-    WHERE id_reserva = p_id_reserva;
-
-    COMMIT;
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20017, 'Reserva no encontrada.');
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
-END;
-/
-
-
--- Procedimiento para Actualizar Estado de Asientos en Base al Estado de Vuelo
-CREATE OR REPLACE PROCEDURE actualizar_estado_vuelo (
-    p_id_vuelo NUMBER,
-    p_nuevo_estado VARCHAR2
-) IS
-BEGIN
-    UPDATE VUELO
-    SET estado = p_nuevo_estado
-    WHERE id_vuelo = p_id_vuelo;
-
-    COMMIT;
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20020, 'Vuelo no encontrado.');
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
-END;
-/
-
--- Procedimiento para Asignar Equipaje a un Pasajero
-CREATE OR REPLACE PROCEDURE asignar_equipaje_a_pasajero (
-    p_id_pasajero NUMBER,
-    p_tipo_equipaje VARCHAR2,
-    p_peso NUMBER,
-    p_alto NUMBER,
-    p_ancho NUMBER,
-    p_profundidad NUMBER
-) IS
-BEGIN
-    -- Insertar el nuevo equipaje para el pasajero especificado
-    INSERT INTO EQUIPAJE (
-        id_equipaje, id_pasajero, tipo_equipaje, peso, alto, ancho, profundidad, cobro_extra
-    ) VALUES (
-        (SELECT NVL(MAX(id_equipaje), 0) + 1 FROM EQUIPAJE),  -- Generar un nuevo ID para el equipaje
-        p_id_pasajero,
-        p_tipo_equipaje,
-        p_peso,
-        p_alto,
-        p_ancho,
-        p_profundidad,
-        0  -- El trigger de validación de tamaño y peso actualizará el cobro_extra si es necesario
-    );
-
-    COMMIT;
-EXCEPTION
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
-END;
-/
-
--- Procedimiento Para Registrar Equipaje Extra con Cobro Adicional
-CREATE OR REPLACE PROCEDURE registrar_equipaje_extra (
-    p_id_pasajero NUMBER,
-    p_tipo_equipaje VARCHAR2,
-    p_peso NUMBER,
-    p_alto NUMBER,
-    p_ancho NUMBER,
-    p_profundidad NUMBER
-) IS
-BEGIN
-    -- Registrar el equipaje sin necesidad de cálculos adicionales
-    INSERT INTO EQUIPAJE (
-        id_equipaje, id_pasajero, tipo_equipaje, peso, alto, ancho, profundidad
-    ) VALUES (
-        (SELECT NVL(MAX(id_equipaje), 0) + 1 FROM EQUIPAJE), p_id_pasajero, p_tipo_equipaje, p_peso, p_alto, p_ancho, p_profundidad
-    );
-
-    COMMIT;
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20021, 'Pasajero no encontrado.');
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
-END;
-/
-
---Procedimiento para Generar Informe de Vuelos de un Pasajero
-CREATE OR REPLACE PROCEDURE informe_vuelos_pasajero (
-    p_id_pasajero NUMBER
-) IS
-    CURSOR c_vuelos IS
-        SELECT v.id_vuelo, a.nombre_aerolinea, v.fecha_hora_salida, v.fecha_hora_llegada, ap_dest.nombre AS destino
-        FROM VUELO v
-        JOIN RESERVA r ON v.id_vuelo = r.id_vuelo
-        JOIN AEROLINEA a ON v.id_aerolinea = a.id_aerolinea
-        JOIN AEROPUERTO ap_dest ON v.id_aeropuerto_destino = ap_dest.id_aeropuerto
-        WHERE r.id_pasajero = p_id_pasajero
-        AND v.estado IN ('Programado', 'En vuelo');
-BEGIN
-    FOR vuelo_rec IN c_vuelos LOOP
-        DBMS_OUTPUT.PUT_LINE('Vuelo ID: ' || vuelo_rec.id_vuelo);
-        DBMS_OUTPUT.PUT_LINE('Aerolínea: ' || vuelo_rec.nombre_aerolinea);
-        DBMS_OUTPUT.PUT_LINE('Salida: ' || TO_CHAR(vuelo_rec.fecha_hora_salida, 'DD-MM-YYYY HH24:MI'));
-        DBMS_OUTPUT.PUT_LINE('Llegada: ' || TO_CHAR(vuelo_rec.fecha_hora_llegada, 'DD-MM-YYYY HH24:MI'));
-        DBMS_OUTPUT.PUT_LINE('Destino: ' || vuelo_rec.destino);
-        DBMS_OUTPUT.PUT_LINE('-----------------------');
-    END LOOP;
-END;
-/
-
--- Procedimiento Completo para Obtener el Boleto de Abordaje
-CREATE OR REPLACE PROCEDURE obtener_boleto_abordaje (
-    p_id_check_in NUMBER
-) IS
-    v_nombre_pasajero VARCHAR2(100);
-    v_apellido_pasajero VARCHAR2(100);
-    v_numero_vuelo VARCHAR2(20);
-    v_aerolinea VARCHAR2(100);
-    v_origen VARCHAR2(100);
-    v_destino VARCHAR2(100);
-    v_fecha_salida TIMESTAMP;
-    v_fecha_llegada TIMESTAMP;
-    v_terminal NUMBER;
-    v_puerta NUMBER;
-    v_asiento TIPO_ASIENTO;
-    v_tipo_boleto VARCHAR2(50);
-    v_fecha_emision TIMESTAMP := SYSDATE;
-BEGIN
-    -- Obtener los datos del boleto de abordaje y detalles adicionales del vuelo y pasajero
-    SELECT p.nombre, p.apellido, v.id_vuelo, a.nombre_aerolinea, ap_origen.nombre, ap_dest.nombre, 
-           v.fecha_hora_salida, v.fecha_hora_llegada, t.id_terminal, pt.id_puerta, 
-           r.asientos, r.tipo_boleto
-    INTO v_nombre_pasajero, v_apellido_pasajero, v_numero_vuelo, v_aerolinea, v_origen, v_destino, 
-         v_fecha_salida, v_fecha_llegada, v_terminal, v_puerta, 
-         v_asiento, v_tipo_boleto
-    FROM PASAJERO p
-    JOIN RESERVA r ON p.id_pasajero = r.id_pasajero
-    JOIN VUELO v ON r.id_vuelo = v.id_vuelo
-    JOIN AEROLINEA a ON v.id_aerolinea = a.id_aerolinea
-    JOIN AEROPUERTO ap_origen ON v.id_aeropuerto_origen = ap_origen.id_aeropuerto
-    JOIN AEROPUERTO ap_dest ON v.id_aeropuerto_destino = ap_dest.id_aeropuerto
-    JOIN TERMINAL_AEROPUERTO t ON ap_dest.id_aeropuerto = t.id_aeropuerto
-    JOIN PUERTA pt ON t.id_terminal = pt.id_terminal
-    WHERE r.id_reserva = p_id_check_in;
-
-    -- Mostrar la información del boleto de abordaje
-    DBMS_OUTPUT.PUT_LINE('--- TICKET DE ABORDAJE ---');
-    DBMS_OUTPUT.PUT_LINE('Pasajero: ' || v_nombre_pasajero || ' ' || v_apellido_pasajero);
-    DBMS_OUTPUT.PUT_LINE('Vuelo: ' || v_numero_vuelo || ' - ' || v_aerolinea);
-    DBMS_OUTPUT.PUT_LINE('Origen: ' || v_origen || ' - Destino: ' || v_destino);
-    DBMS_OUTPUT.PUT_LINE('Fecha de Salida: ' || TO_CHAR(v_fecha_salida, 'DD-MM-YYYY HH24:MI'));
-    DBMS_OUTPUT.PUT_LINE('Fecha de Llegada: ' || TO_CHAR(v_fecha_llegada, 'DD-MM-YYYY HH24:MI'));
-    DBMS_OUTPUT.PUT_LINE('Terminal: ' || v_terminal || ' - Puerta: ' || v_puerta);
-    DBMS_OUTPUT.PUT_LINE('Asientos: ' || v_asiento(1) || ', ' || v_asiento(2) || ', ' || v_asiento(3) || ', ' || v_asiento(4) || ', ' || v_asiento(5));
-    DBMS_OUTPUT.PUT_LINE('Clase de Servicio: ' || v_tipo_boleto);
-    DBMS_OUTPUT.PUT_LINE('Fecha de Emisión: ' || TO_CHAR(v_fecha_emision, 'DD-MM-YYYY HH24:MI'));
-    DBMS_OUTPUT.PUT_LINE('--------------------------');
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20025, 'No se encontró el documento de abordaje para el check-in proporcionado.');
-    WHEN OTHERS THEN
-        ROLLBACK;
-        RAISE;
-END;
-/
