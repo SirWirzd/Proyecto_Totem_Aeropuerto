@@ -208,11 +208,11 @@ CREATE TABLE ASISTENCIA (
 
 CREATE TABLE CHECK_IN (
     id_checkin NUMBER NOT NULL PRIMARY KEY,
-    id_pasajero NUMBER NOT NULL,
+    id_boleto NUMBER NOT NULL,
     id_vuelo NUMBER NOT NULL,
     fecha_checkin TIMESTAMP NOT NULL,
-    CONSTRAINT fk_pasajero_checkin FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
+    CONSTRAINT fk_boleto_checkin FOREIGN KEY (id_boleto) REFERENCES BOLETO(id_boleto) ON DELETE CASCADE,
     CONSTRAINT fk_vuelo_checkin FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
-    CONSTRAINT uq_pasajero_vuelo_checkin UNIQUE (id_pasajero, id_vuelo)
+    CONSTRAINT uq_pasajero_vuelo_checkin UNIQUE (id_boleto, id_vuelo)
 );
 
