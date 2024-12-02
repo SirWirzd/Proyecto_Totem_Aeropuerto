@@ -195,7 +195,7 @@ CREATE TABLE SERVICIOS_ADICIONALES (
 
 CREATE TABLE EQUIPAJE (
     id_equipaje NUMBER NOT NULL PRIMARY KEY,
-    id_pasajero NUMBER NOT NULL,
+    id_boleto NUMBER NOT NULL,
     id_vuelo NUMBER NOT NULL,
     id_tipo_equipaje NUMBER NOT NULL,
     peso NUMBER NOT NULL,
@@ -203,7 +203,7 @@ CREATE TABLE EQUIPAJE (
     ancho NUMBER NOT NULL,
     largo NUMBER NOT NULL,
     precio NUMBER NOT NULL CHECK (precio > 0),
-    CONSTRAINT fk_pasajero_equipaje FOREIGN KEY (id_pasajero) REFERENCES PASAJERO(id_pasajero) ON DELETE CASCADE,
+    CONSTRAINT fk_boleto_equipaje FOREIGN KEY (id_boleto) REFERENCES BOLETO(id_boleto) ON DELETE CASCADE,
     CONSTRAINT fk_vuelo_equipaje FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
     CONSTRAINT fk_tipo_equipaje_equipaje FOREIGN KEY (id_tipo_equipaje) REFERENCES TIPO_EQUIPAJE(id_tipo_equipaje) ON DELETE CASCADE,
     CONSTRAINT ck_dimensiones_equipaje CHECK (peso >0 AND alto > 0 AND ancho > 0 AND largo > 0)
@@ -609,6 +609,7 @@ BEGIN
         END IF;
     END IF;
 END;
+/
 
 -- Actualizar el estado del asiento
 
@@ -622,6 +623,7 @@ BEGIN
         WHERE id_asiento = :NEW.id_asiento;
     END IF;
 END;
+/
 
 -- Actualizar el estado del asiento al cancelar un boleto
 
@@ -709,6 +711,7 @@ BEGIN
         END IF;
     END IF;
 END;
+/
 
 -- Actualizar el precio del boleto al agregar servicios adicionales
 
@@ -720,6 +723,7 @@ BEGIN
     SET precio = precio + :NEW.precio
     WHERE id_boleto = :NEW.id_boleto;
 END;
+/
 
 -- Procedimientos
 
@@ -751,6 +755,14 @@ CREATE OR REPLACE PROCEDURE sp_vuelos_disponibles (p_origen IN VARCHAR2, p_desti
 AS
     v_id_origen NUMBER;
     v_id_destino NUMBER;
+    CURSOR c_vuelos IS
+        SELECT v.id_vuelo, a.nombre_aerolinea, v.fecha_salida, v.fecha_llegada
+        FROM VUELO v
+        JOIN AEROLINEA a ON v.id_aerolinea = a.id_aerolinea
+        WHERE v.id_aeropuerto_origen = v_id_origen
+        AND v.id_aeropuerto_destino = v_id_destino
+        AND v.fecha_salida >= p_fecha_salida;
+    r_vuelo c_vuelos%ROWTYPE;
 BEGIN
     -- Obtener los IDs de los aeropuertos de origen y destino
     SELECT id_aeropuerto INTO v_id_origen
@@ -762,12 +774,13 @@ BEGIN
     WHERE ciudad = p_destino;
 
     -- Mostrar los vuelos disponibles
-    SELECT v.id_vuelo, a.nombre_aerolinea, v.fecha_salida, v.fecha_llegada, v.precio
-    FROM VUELO v
-    JOIN AEROLINEA a ON v.id_aerolinea = a.id_aerolinea
-    WHERE v.id_aeropuerto_origen = v_id_origen
-    AND v.id_aeropuerto_destino = v_id_destino
-    AND v.fecha_salida >= p_fecha_salida;
+    OPEN c_vuelos;
+    LOOP
+        FETCH c_vuelos INTO r_vuelo;
+        EXIT WHEN c_vuelos%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Vuelo ID: ' || r_vuelo.id_vuelo || ', Aerolínea: ' || r_vuelo.nombre_aerolinea || ', Fecha de Salida: ' || r_vuelo.fecha_salida || ', Fecha de Llegada: ' || r_vuelo.fecha_llegada);
+    END LOOP;
+    CLOSE c_vuelos;
 EXCEPTION
     WHEN OTHERS THEN
         ROLLBACK;
