@@ -729,20 +729,26 @@ END;
 
 -- Procedimiento para registrar el check-in del boleto y cambiar su estado
 
-CREATE OR REPLACE PROCEDURE sp_checkin (p_id_boleto IN NUMBER, p_id_vuelo IN NUMBER)
+CREATE OR REPLACE PROCEDURE sp_checkin (p_id_checkin IN NUMBER, p_id_boleto IN NUMBER, p_id_vuelo IN NUMBER)
 AS
-    v_id_checkin NUMBER;
+    v_estado VARCHAR2(15);
 BEGIN
-    INSERT INTO CHECK_IN (id_boleto, id_vuelo, fecha_checkin)
-    VALUES (p_id_boleto, p_id_vuelo, SYSDATE)
-    RETURNING id_checkin INTO v_id_checkin;
+    -- Verificar que el boleto existe y obtener su estado
+    SELECT estado INTO v_estado FROM BOLETO WHERE id_boleto = p_id_boleto;
 
+    -- Insertar en CHECK_IN
+    INSERT INTO CHECK_IN (id_checkin, id_boleto, id_vuelo, fecha_checkin)
+    VALUES (p_id_checkin, p_id_boleto, p_id_vuelo, SYSDATE);
+
+    -- Actualizar el estado del boleto
     UPDATE BOLETO
     SET estado = 'Confirmado'
     WHERE id_boleto = p_id_boleto;
 
     COMMIT;
 EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20001, 'El boleto no existe.');
     WHEN OTHERS THEN
         ROLLBACK;
         RAISE;
@@ -931,9 +937,62 @@ EXCEPTION
 END;
 /
 
+-- Insertar datos en la tabla vuelo
+
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (1, 1, 1, 1, 2, 1, 1, TO_DATE('2022-12-01 08:00:00', 'YYYY-MM-DD HH24:MI:SS'), TO_DATE('2022-12-01 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), 1);
+
+-- Insertar datos en la tabla pasaajero
+
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (1, '123456789', 'Juan', 'Perez', TO_DATE('1990-01-01', 'YYYY-MM-DD'), '24515488', '78451548', 'g.g@gmail.com', '12345678', 'N', 1);
+
+
+-- Insertar datos en la tabla boleto
+
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (1, 1, 1, 1, 1, 1, 'Pendiente', 100000);
+
+-- Insertar datos en la tabla servicios adicionales
+
+INSERT INTO SERVICIOS_ADICIONALES (id_servicio, id_boleto, nombre_servicio, precio) VALUES (1, 1, 'Wifi', 10);
+
+-- Insertar datos en la tabla equipaje
+
+INSERT INTO EQUIPAJE (id_equipaje, id_boleto, id_vuelo, id_tipo_equipaje, peso, alto, ancho, largo, precio) VALUES (1, 1, 1, 1, 15, 50, 30, 20, 150);
 
 
 
+SELECT * FROM PASAJERO;
 
+SELECT * FROM BOLETO;
 
+SELECT * FROM VUELO;
 
+-- Verificar asiento ocupados
+
+SELECT numero_asiento, estado
+FROM ASIENTOS
+WHERE id_avion = 1;
+
+-- Check-in
+
+BEGIN
+    sp_checkin(1, 1, 1);
+END;
+/
+
+-- Revisar boletos después del check-in
+
+SELECT * FROM BOLETO;
+
+-- Cancelar un vuelo
+
+BEGIN
+    sp_cancelar_vuelo(1);
+END;
+/
+
+-- itinerario de un pasajero
+
+BEGIN
+    sp_itinerario_pasajero(1);
+END;
+/
