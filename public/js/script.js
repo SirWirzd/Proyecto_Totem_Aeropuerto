@@ -4,6 +4,19 @@ function checkIn() {
     const numPasaporte = document.getElementById('num_pasaporte').value;
     const fechaVuelo = document.getElementById('fecha_vuelo').value;
 
+    // Verificar si la fecha de vuelo está vacía
+    if (!fechaVuelo) {
+        alert("Por favor, ingrese una fecha y hora del vuelo.");
+        return;
+    }
+
+    // Convertir la fecha y hora al formato 'YYYY-MM-DD HH:MM:SS'
+    const fechaParts = fechaVuelo.split('T'); // Separar la fecha y la hora
+    const fecha = fechaParts[0]; // 'YYYY-MM-DD'
+    const hora = fechaParts[1]; // 'HH:MM'
+    const fechaVueloFormateada = `${fecha} ${hora}:00`; // Agregar los segundos como '00'
+
+    // Enviar los datos al servidor
     fetch('/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -11,7 +24,7 @@ function checkIn() {
             id_boleto: idBoleto,
             nombre_pasajero: nombrePasajero,
             num_pasaporte: numPasaporte,
-            fecha_vuelo: fechaVuelo
+            fecha_vuelo: fechaVueloFormateada // Enviamos la fecha formateada
         })
     })
     .then(response => response.json())
@@ -34,3 +47,4 @@ function checkIn() {
         document.getElementById('result').innerHTML = `<p>Error al realizar la solicitud.</p>`;
     });
 }
+
