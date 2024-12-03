@@ -13,9 +13,9 @@ GRANT ALL PRIVILEGES TO admin;
 
 -- Eliminación de tablas si existen previamente
 
+DROP TABLE EQUIPAJE CASCADE CONSTRAINTS;
 DROP TABLE CHECK_IN CASCADE CONSTRAINTS;
 DROP TABLE ASISTENCIA CASCADE CONSTRAINTS;
-DROP TABLE EQUIPAJE CASCADE CONSTRAINTS;
 DROP TABLE SERVICIOS_ADICIONALES CASCADE CONSTRAINTS;
 DROP TABLE BOLETO CASCADE CONSTRAINTS;
 DROP TABLE PASAJERO CASCADE CONSTRAINTS;
@@ -191,24 +191,6 @@ CREATE TABLE SERVICIOS_ADICIONALES (
     CONSTRAINT fk_boleto_servicio FOREIGN KEY (id_boleto) REFERENCES BOLETO(id_boleto) ON DELETE CASCADE
 );
 
--- Tabla Equipaje de Pasajero
-
-CREATE TABLE EQUIPAJE (
-    id_equipaje NUMBER NOT NULL PRIMARY KEY,
-    id_boleto NUMBER NOT NULL,
-    id_vuelo NUMBER NOT NULL,
-    id_tipo_equipaje NUMBER NOT NULL,
-    peso NUMBER NOT NULL,
-    alto NUMBER NOT NULL,
-    ancho NUMBER NOT NULL,
-    largo NUMBER NOT NULL,
-    precio NUMBER NOT NULL CHECK (precio > 0),
-    CONSTRAINT fk_boleto_equipaje FOREIGN KEY (id_boleto) REFERENCES BOLETO(id_boleto) ON DELETE CASCADE,
-    CONSTRAINT fk_vuelo_equipaje FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
-    CONSTRAINT fk_tipo_equipaje_equipaje FOREIGN KEY (id_tipo_equipaje) REFERENCES TIPO_EQUIPAJE(id_tipo_equipaje) ON DELETE CASCADE,
-    CONSTRAINT ck_dimensiones_equipaje CHECK (peso >0 AND alto > 0 AND ancho > 0 AND largo > 0)
-);
-
 -- Tabla Asistencia Especial
 
 CREATE TABLE ASISTENCIA (
@@ -231,6 +213,24 @@ CREATE TABLE CHECK_IN (
     CONSTRAINT fk_boleto_checkin FOREIGN KEY (id_boleto) REFERENCES BOLETO(id_boleto) ON DELETE CASCADE,
     CONSTRAINT fk_vuelo_checkin FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
     CONSTRAINT uq_pasajero_vuelo_checkin UNIQUE (id_boleto, id_vuelo)
+);
+
+-- Tabla Equipaje de Pasajero
+
+CREATE TABLE EQUIPAJE (
+    id_equipaje NUMBER NOT NULL PRIMARY KEY,
+    id_boleto NUMBER NOT NULL,
+    id_vuelo NUMBER NOT NULL,
+    id_tipo_equipaje NUMBER NOT NULL,
+    peso NUMBER NOT NULL,
+    alto NUMBER NOT NULL,
+    ancho NUMBER NOT NULL,
+    largo NUMBER NOT NULL,
+    precio NUMBER NOT NULL CHECK (precio > 0),
+    CONSTRAINT fk_boleto_equipaje FOREIGN KEY (id_boleto) REFERENCES BOLETO(id_boleto) ON DELETE CASCADE,
+    CONSTRAINT fk_vuelo_equipaje FOREIGN KEY (id_vuelo) REFERENCES VUELO(id_vuelo) ON DELETE CASCADE,
+    CONSTRAINT fk_tipo_equipaje_equipaje FOREIGN KEY (id_tipo_equipaje) REFERENCES TIPO_EQUIPAJE(id_tipo_equipaje) ON DELETE CASCADE,
+    CONSTRAINT ck_dimensiones_equipaje CHECK (peso >0 AND alto > 0 AND ancho > 0 AND largo > 0)
 );
 
 -- Insertar datos base iniciales de la base de datos
