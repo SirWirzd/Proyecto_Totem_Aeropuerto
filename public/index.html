@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in Totem</title>
+    <!-- La ruta a 'style.css' se debe apuntar desde la raíz, no desde 'public' -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <h1>Check-in de Vuelo</h1>
+
+    <div class="form-container">
+        <label for="id_boleto">ID del Boleto:</label>
+        <input type="text" id="id_boleto" placeholder="Ingrese ID del boleto">
+
+        <label for="nombre_pasajero">Nombre del Pasajero:</label>
+        <input type="text" id="nombre_pasajero" placeholder="Ingrese nombre completo">
+
+        <label for="num_pasaporte">Número de Pasaporte:</label>
+        <input type="text" id="num_pasaporte" placeholder="Ingrese número de pasaporte">
+
+        <label for="fecha_vuelo">Fecha del Vuelo:</label>
+        <input type="date" id="fecha_vuelo">
+
+        <button onclick="checkIn()">Realizar Check-in</button>
+    </div>
+
+    <div id="result"></div>
+
+    <!-- La ruta a 'script.js' también se debe apuntar desde la raíz -->
+    <script src="/js/script.js"></script>
+</body>
+</html>
