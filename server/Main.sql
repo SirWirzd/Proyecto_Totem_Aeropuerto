@@ -729,16 +729,18 @@ END;
 
 -- Procedimiento para registrar el check-in del boleto y cambiar su estado
 
-CREATE OR REPLACE PROCEDURE sp_checkin (p_id_checkin IN NUMBER, p_id_boleto IN NUMBER, p_id_vuelo IN NUMBER)
-AS
-    v_estado VARCHAR2(15);
+CREATE OR REPLACE PROCEDURE sp_checkin (
+    p_id_boleto IN NUMBER,
+    p_id_vuelo IN NUMBER
+) AS
+    v_id_checkin NUMBER;
 BEGIN
-    -- Verificar que el boleto existe y obtener su estado
-    SELECT estado INTO v_estado FROM BOLETO WHERE id_boleto = p_id_boleto;
+    -- Calcular el ID de check-in basado en la cantidad actual de registros
+    SELECT NVL(MAX(id_checkin), 0) + 1 INTO v_id_checkin FROM CHECK_IN;
 
-    -- Insertar en CHECK_IN
+    -- Insertar en la tabla CHECK_IN
     INSERT INTO CHECK_IN (id_checkin, id_boleto, id_vuelo, fecha_checkin)
-    VALUES (p_id_checkin, p_id_boleto, p_id_vuelo, SYSDATE);
+    VALUES (v_id_checkin, p_id_boleto, p_id_vuelo, SYSDATE);
 
     -- Actualizar el estado del boleto
     UPDATE BOLETO
@@ -747,13 +749,13 @@ BEGIN
 
     COMMIT;
 EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RAISE_APPLICATION_ERROR(-20001, 'El boleto no existe.');
     WHEN OTHERS THEN
         ROLLBACK;
         RAISE;
 END;
 /
+
+
 
 -- Actualizar el estado de un vuelo cuando todos los boletos están confirmados
 
@@ -817,65 +819,43 @@ END;
 
 -- Procedimiento para generar el itinerario de un pasajero
 
-CREATE OR REPLACE PROCEDURE sp_itinerario_pasajero (p_id_pasajero IN NUMBER)
-AS
-    v_nombre_pasajero VARCHAR2(50);
-    v_apellido_pasajero VARCHAR2(50);
-    v_id_boleto NUMBER;
-    v_id_vuelo NUMBER;
-    v_fecha_salida DATE;
-    v_fecha_llegada DATE;
-    v_ciudad_origen VARCHAR2(50);
-    v_ciudad_destino VARCHAR2(50);
-    v_numero_asiento VARCHAR2(10);
-    v_terminal VARCHAR2(50);
-    v_puerta VARCHAR2(50);
+CREATE OR REPLACE PROCEDURE sp_itinerario_pasajero (
+    p_id_pasajero IN NUMBER,
+    o_itinerario OUT SYS_REFCURSOR
+) AS
 BEGIN
-    -- Obtener el nombre y apellido del pasajero
-    SELECT nombre_pasajero, apellido_pasajero INTO v_nombre_pasajero, v_apellido_pasajero
-    FROM PASAJERO
-    WHERE id_pasajero = p_id_pasajero;
-
-    -- Mostrar los vuelos del pasajero
-    FOR r IN (
-        SELECT b.id_boleto, v.id_vuelo, v.fecha_salida, v.fecha_llegada, ao.ciudad AS ciudad_origen, ad.ciudad AS ciudad_destino, a.numero_asiento, t.nombre_terminal, p.nombre_puerta
+    -- Abrir el cursor para devolver los datos del itinerario
+    OPEN o_itinerario FOR
+        SELECT 
+            p.nombre_pasajero || ' ' || p.apellido_pasajero AS pasajero,
+            SUBSTR(p.dni_pasajero, 1, 2) || '.' || SUBSTR(p.dni_pasajero, 3, 3) || '.' || SUBSTR(p.dni_pasajero, 6, 3) || '-' || SUBSTR(p.dni_pasajero, 9, 1) AS dni,
+            b.id_boleto AS boleto,
+            v.id_vuelo AS vuelo,
+            TO_CHAR(v.fecha_salida, 'YYYY-MM-DD') AS fecha_salida,
+            TO_CHAR(v.fecha_salida, 'HH24:MI:SS') AS hora_salida,
+            TO_CHAR(v.fecha_llegada, 'YYYY-MM-DD') AS fecha_llegada,
+            TO_CHAR(v.fecha_llegada, 'HH24:MI:SS') AS hora_llegada,
+            ao.ciudad AS ciudad_origen,
+            ad.ciudad AS ciudad_destino,
+            a.numero_asiento AS asiento,
+            t.nombre_terminal AS terminal,
+            pu.nombre_puerta AS puerta,
+            b.estado AS estado_boleto
         FROM BOLETO b
+        JOIN PASAJERO p ON b.id_pasajero = p.id_pasajero
         JOIN VUELO v ON b.id_vuelo = v.id_vuelo
         JOIN AEROPUERTO ao ON v.id_aeropuerto_origen = ao.id_aeropuerto
         JOIN AEROPUERTO ad ON v.id_aeropuerto_destino = ad.id_aeropuerto
         JOIN ASIENTOS a ON b.id_asiento = a.id_asiento AND b.id_avion = a.id_avion
         JOIN TERMINAL_PUERTA t ON v.id_terminal = t.id_terminal
-        JOIN PUERTA p ON v.id_puerta = p.id_puerta
-        WHERE b.id_pasajero = p_id_pasajero
-    ) LOOP
-        v_id_boleto := r.id_boleto;
-        v_id_vuelo := r.id_vuelo;
-        v_fecha_salida := r.fecha_salida;
-        v_fecha_llegada := r.fecha_llegada;
-        v_ciudad_origen := r.ciudad_origen;
-        v_ciudad_destino := r.ciudad_destino;
-        v_numero_asiento := r.numero_asiento;
-        v_terminal := r.nombre_terminal;
-        v_puerta := r.nombre_puerta;
-
-        DBMS_OUTPUT.PUT_LINE('Pasajero: ' || v_nombre_pasajero || ' ' || v_apellido_pasajero);
-        DBMS_OUTPUT.PUT_LINE('Boleto: ' || v_id_boleto);
-        DBMS_OUTPUT.PUT_LINE('Vuelo: ' || v_id_vuelo);
-        DBMS_OUTPUT.PUT_LINE('Fecha de Salida: ' || v_fecha_salida);
-        DBMS_OUTPUT.PUT_LINE('Fecha de Llegada: ' || v_fecha_llegada);
-        DBMS_OUTPUT.PUT_LINE('Origen: ' || v_ciudad_origen);
-        DBMS_OUTPUT.PUT_LINE('Destino: ' || v_ciudad_destino);
-        DBMS_OUTPUT.PUT_LINE('Asiento: ' || v_numero_asiento);
-        DBMS_OUTPUT.PUT_LINE('Terminal: ' || v_terminal);
-        DBMS_OUTPUT.PUT_LINE('Puerta: ' || v_puerta);
-        DBMS_OUTPUT.PUT_LINE('--------------------------------');
-    END LOOP;
+        JOIN PUERTA pu ON v.id_puerta = pu.id_puerta
+        WHERE b.id_pasajero = p_id_pasajero;
 EXCEPTION
     WHEN OTHERS THEN
-        ROLLBACK;
         RAISE;
 END;
 /
+
 
 -- Procedimiento para registrar servicios adicionales en masa
 
@@ -1098,7 +1078,7 @@ WHERE id_avion = 1;
 -- Check-in
 
 BEGIN
-    sp_checkin(1, 1, 1);
+    sp_checkin(2, 2);
 END;
 /
 
@@ -1125,15 +1105,6 @@ END;
 
 BEGIN
     sp_checkin(1, 1, 1);
-    sp_checkin(2, 2, 1);
-    sp_checkin(3, 3, 1);
-    sp_checkin(4, 4, 1);
-    sp_checkin(5, 5, 1);
-    sp_checkin(6, 6, 1);
-    sp_checkin(7, 7, 1);
-    sp_checkin(8, 8, 1);
-    sp_checkin(9, 9, 1);
-    sp_checkin(10, 10, 1);
 END;
 /
 

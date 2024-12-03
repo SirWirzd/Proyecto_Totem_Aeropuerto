@@ -1,12 +1,11 @@
 import './App.css';
-import { Pasajeros, Vuelos } from './totem-aeropuerto';
+import TotemAeropuerto from './totem-aeropuerto';
 
 function App() {
   return (
     <div className="App">
       <header className="Totem Aeropuerto">
-        <Vuelos />
-        <Pasajeros />
+        <TotemAeropuerto />
       </header>
     </div>
   );
