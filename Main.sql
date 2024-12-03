@@ -755,6 +755,27 @@ EXCEPTION
 END;
 /
 
+-- Actualizar el estado de un vuelo cuando todos los boletos están confirmados
+
+CREATE OR REPLACE PROCEDURE sp_actualizar_estado_vuelo (p_id_vuelo IN NUMBER)
+AS
+    v_boletos_pendientes NUMBER;
+BEGIN
+    -- Contar los boletos pendientes de confirmación
+    SELECT COUNT(*) INTO v_boletos_pendientes
+    FROM BOLETO
+    WHERE id_vuelo = p_id_vuelo
+    AND estado = 'Pendiente';
+
+    -- Actualizar el estado del vuelo si no hay boletos pendientes
+    IF v_boletos_pendientes = 0 THEN
+        UPDATE VUELO
+        SET id_estado = 3
+        WHERE id_vuelo = p_id_vuelo;
+    END IF;
+END;
+/
+
 -- Procedimiento para obtener los vuelos disponibles
 
 CREATE OR REPLACE PROCEDURE sp_vuelos_disponibles (p_origen IN VARCHAR2, p_destino IN VARCHAR2, p_fecha_salida IN DATE)
@@ -799,6 +820,7 @@ END;
 CREATE OR REPLACE PROCEDURE sp_itinerario_pasajero (p_id_pasajero IN NUMBER)
 AS
     v_nombre_pasajero VARCHAR2(50);
+    v_apellido_pasajero VARCHAR2(50);
     v_id_boleto NUMBER;
     v_id_vuelo NUMBER;
     v_fecha_salida DATE;
@@ -809,8 +831,8 @@ AS
     v_terminal VARCHAR2(50);
     v_puerta VARCHAR2(50);
 BEGIN
-    -- Obtener el nombre del pasajero
-    SELECT nombre_pasajero INTO v_nombre_pasajero
+    -- Obtener el nombre y apellido del pasajero
+    SELECT nombre_pasajero, apellido_pasajero INTO v_nombre_pasajero, v_apellido_pasajero
     FROM PASAJERO
     WHERE id_pasajero = p_id_pasajero;
 
@@ -836,7 +858,7 @@ BEGIN
         v_terminal := r.nombre_terminal;
         v_puerta := r.nombre_puerta;
 
-        DBMS_OUTPUT.PUT_LINE('Pasajero: ' || v_nombre_pasajero);
+        DBMS_OUTPUT.PUT_LINE('Pasajero: ' || v_nombre_pasajero || ' ' || v_apellido_pasajero);
         DBMS_OUTPUT.PUT_LINE('Boleto: ' || v_id_boleto);
         DBMS_OUTPUT.PUT_LINE('Vuelo: ' || v_id_vuelo);
         DBMS_OUTPUT.PUT_LINE('Fecha de Salida: ' || v_fecha_salida);
@@ -937,18 +959,114 @@ EXCEPTION
 END;
 /
 
+-- Procedimiento para ingresar vuelos
+
+CREATE OR REPLACE PROCEDURE sp_ingresar_vuelo (p_id_vuelo IN NUMBER, p_id_aerolinea IN NUMBER, p_id_avion IN NUMBER, p_id_aeropuerto_origen IN NUMBER, p_id_aeropuerto_destino IN NUMBER, p_id_terminal IN NUMBER, p_id_puerta IN NUMBER, p_fecha_salida IN DATE, p_fecha_llegada IN DATE, p_id_estado IN NUMBER)
+AS
+BEGIN
+    INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado)
+    VALUES (p_id_vuelo, p_id_aerolinea, p_id_avion, p_id_aeropuerto_origen, p_id_aeropuerto_destino, p_id_terminal, p_id_puerta, p_fecha_salida, p_fecha_llegada, p_id_estado);
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+-- Procedimiento para ingresar pasajeros
+
+CREATE OR REPLACE PROCEDURE sp_ingresar_pasajero (p_id_pasajero IN NUMBER, p_nombre_pasajero IN VARCHAR2, p_pasaporte IN VARCHAR2, p_visa IN VARCHAR2)
+AS
+BEGIN
+    INSERT INTO PASAJERO (id_pasajero, nombre_pasajero, pasaporte, visa)
+    VALUES (p_id_pasajero, p_nombre_pasajero, p_pasaporte, p_visa);
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+-- Procedimiento para ingresar boletos
+
+CREATE OR REPLACE PROCEDURE sp_ingresar_boleto (p_id_boleto IN NUMBER, p_id_pasajero IN NUMBER, p_id_vuelo IN NUMBER, p_id_asiento IN NUMBER, p_precio IN NUMBER, p_estado IN VARCHAR2)
+AS
+BEGIN
+    INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_asiento, precio, estado)
+    VALUES (p_id_boleto, p_id_pasajero, p_id_vuelo, p_id_asiento, p_precio, p_estado);
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+-- Procedimiento para ingresar servicios adicionales
+
+CREATE OR REPLACE PROCEDURE sp_ingresar_servicio (p_id_boleto IN NUMBER, p_nombre_servicio IN VARCHAR2, p_precio IN NUMBER)
+AS
+BEGIN
+    INSERT INTO SERVICIOS_ADICIONALES (id_boleto, nombre_servicio, precio)
+    VALUES (p_id_boleto, p_nombre_servicio, p_precio);
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+
+
 -- Insertar datos en la tabla vuelo
 
-INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (1, 1, 1, 1, 2, 1, 1, TO_DATE('2022-12-01 08:00:00', 'YYYY-MM-DD HH24:MI:SS'), TO_DATE('2022-12-01 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (1, 1, 1, 1, 2, 1, 1, TO_DATE('2024-12-04 08:00:00', 'YYYY-MM-DD HH24:MI:SS'), TO_DATE('2024-12-04 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (2, 2, 2, 2, 3, 3, 7, SYSDATE + INTERVAL '1' DAY, SYSDATE + INTERVAL '1' DAY + INTERVAL '2' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (3, 3, 3, 3, 4, 5, 13, SYSDATE + INTERVAL '2' DAY, SYSDATE + INTERVAL '2' DAY + INTERVAL '3' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (4, 4, 4, 4, 5, 6, 17, SYSDATE + INTERVAL '3' DAY, SYSDATE + INTERVAL '3' DAY + INTERVAL '4' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (5, 5, 5, 5, 6, 8, 21, SYSDATE + INTERVAL '4' DAY, SYSDATE + INTERVAL '4' DAY + INTERVAL '5' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (6, 6, 6, 6, 7, 10, 25, SYSDATE + INTERVAL '5' DAY, SYSDATE + INTERVAL '5' DAY + INTERVAL '6' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (10, 10, 10, 10, 11, 16, 1, SYSDATE + INTERVAL '9' DAY, SYSDATE + INTERVAL '9' DAY + INTERVAL '10' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (11, 11, 11, 11, 12, 18, 2, SYSDATE + INTERVAL '10' DAY, SYSDATE + INTERVAL '10' DAY + INTERVAL '11' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (12, 12, 12, 12, 13, 20, 3, SYSDATE + INTERVAL '11' DAY, SYSDATE + INTERVAL '11' DAY + INTERVAL '12' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (13, 13, 13, 13, 14, 22, 4, SYSDATE + INTERVAL '12' DAY, SYSDATE + INTERVAL '12' DAY + INTERVAL '13' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (14, 14, 14, 14, 15, 24, 5, SYSDATE + INTERVAL '13' DAY, SYSDATE + INTERVAL '13' DAY + INTERVAL '14' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (15, 15, 15, 15, 16, 26, 6, SYSDATE + INTERVAL '14' DAY, SYSDATE + INTERVAL '14' DAY + INTERVAL '15' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (16, 16, 16, 16, 17, 27, 7, SYSDATE + INTERVAL '15' DAY, SYSDATE + INTERVAL '15' DAY + INTERVAL '16' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (17, 17, 17, 17, 18, 29, 8, SYSDATE + INTERVAL '16' DAY, SYSDATE + INTERVAL '16' DAY + INTERVAL '17' HOUR, 1);
+INSERT INTO VUELO (id_vuelo, id_aerolinea, id_avion, id_aeropuerto_origen, id_aeropuerto_destino, id_terminal, id_puerta, fecha_salida, fecha_llegada, id_estado) VALUES (18, 18, 18, 18, 19, 31, 9, SYSDATE + INTERVAL '17' DAY, SYSDATE + INTERVAL '17' DAY + INTERVAL '18' HOUR, 1);
 
 -- Insertar datos en la tabla pasaajero
 
 INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (1, '123456789', 'Juan', 'Perez', TO_DATE('1990-01-01', 'YYYY-MM-DD'), '24515488', '78451548', 'g.g@gmail.com', '12345678', 'N', 1);
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (2, '234567890', 'Ana', 'Gomez', TO_DATE('1985-02-15', 'YYYY-MM-DD'), '34567890', '12345678', 'ana.gomez@gmail.com', '23456789', 'N', 2);
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (3, '345678901', 'Luis', 'Martinez', TO_DATE('1978-03-20', 'YYYY-MM-DD'), '45678901', '23456789', 'luis.martinez@gmail.com', '34567890', 'N', 3);
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (4, '456789012', 'Maria', 'Lopez', TO_DATE('1992-04-25', 'YYYY-MM-DD'), '56789012', '34567890', 'maria.lopez@gmail.com', '45678901', 'N', 4);
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (5, '567890123', 'Carlos', 'Rodriguez', TO_DATE('1980-05-30', 'YYYY-MM-DD'), '67890123', '45678901', 'carlos.rodriguez@gmail.com', '56789012', 'N', 5);
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (6, '678901234', 'Laura', 'Fernandez', TO_DATE('1988-06-10', 'YYYY-MM-DD'), '78901234', '56789012', 'laura.fernandez@gmail.com', '67890123', 'N', 6);
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (7, '789012345', 'Jorge', 'Perez', TO_DATE('1995-07-15', 'YYYY-MM-DD'), '89012345', '67890123', 'jorge.perez@gmail.com', '78901234', 'N', 7);
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (8, '890123456', 'Sofia', 'Gonzalez', TO_DATE('1983-08-20', 'YYYY-MM-DD'), '90123456', '78901234', 'sofia.gonzalez@gmail.com', '89012345', 'N', 8);
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (9, '901234567', 'Miguel', 'Diaz', TO_DATE('1975-09-25', 'YYYY-MM-DD'), '01234567', '89012345', 'miguel.diaz@gmail.com', '90123456', 'N', 9);
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (10, '012345678', 'Elena', 'Ramirez', TO_DATE('1990-10-30', 'YYYY-MM-DD'), '12345678', '90123456', 'elena.ramirez@gmail.com', '01234567', 'N', 10);
+INSERT INTO PASAJERO (id_pasajero, dni_pasajero, nombre_pasajero, apellido_pasajero, fecha_nacimiento, pasaporte, visa, correo_pasajero, telefono_pasajero, asistencia_especial, id_pais) VALUES (11, '202456731', 'Gianfranco', 'Astorga', TO_DATE('2000-05-24', 'YYYY-MM-DD'), '23456789', '01234567', 'gianastorga11@gmail.com', '976177521', 'N', 11);
 
 
 -- Insertar datos en la tabla boleto
 
 INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (1, 1, 1, 1, 1, 1, 'Pendiente', 100000);
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (2, 2, 2, 2, 2, 2, 'Pendiente', 200000);
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (3, 3, 3, 3, 3, 3, 'Pendiente', 300000);
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (4, 4, 4, 1, 4, 4, 'Pendiente', 400000);
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (5, 5, 5, 2, 5, 5, 'Pendiente', 500000);
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (6, 6, 6, 3, 6, 6, 'Pendiente', 600000);
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (7, 7, 1, 1, 7, 7, 'Pendiente', 700000);
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (8, 8, 3, 2, 8, 8, 'Pendiente', 800000);
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (9, 9, 3, 3, 9, 9, 'Pendiente', 900000);
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (10, 10, 10, 1, 10, 10, 'Pendiente', 1000000);
+INSERT INTO BOLETO (id_boleto, id_pasajero, id_vuelo, id_tipo_boleto, id_asiento, id_avion, estado, precio) VALUES (11, 11, 1, 1, 2, 1, 'Pendiente', 1000000);
 
 -- Insertar datos en la tabla servicios adicionales
 
@@ -957,6 +1075,11 @@ INSERT INTO SERVICIOS_ADICIONALES (id_servicio, id_boleto, nombre_servicio, prec
 -- Insertar datos en la tabla equipaje
 
 INSERT INTO EQUIPAJE (id_equipaje, id_boleto, id_vuelo, id_tipo_equipaje, peso, alto, ancho, largo, precio) VALUES (1, 1, 1, 1, 15, 50, 30, 20, 150);
+INSERT INTO EQUIPAJE (id_equipaje, id_boleto, id_vuelo, id_tipo_equipaje, peso, alto, ancho, largo, precio) VALUES (2, 2, 2, 2, 20, 60, 40, 30, 200);
+INSERT INTO EQUIPAJE (id_equipaje, id_boleto, id_vuelo, id_tipo_equipaje, peso, alto, ancho, largo, precio) VALUES (3, 3, 3, 3, 25, 70, 50, 40, 250);
+INSERT INTO EQUIPAJE (id_equipaje, id_boleto, id_vuelo, id_tipo_equipaje, peso, alto, ancho, largo, precio) VALUES (4, 4, 4, 1, 10, 40, 20, 10, 100);
+INSERT INTO EQUIPAJE (id_equipaje, id_boleto, id_vuelo, id_tipo_equipaje, peso, alto, ancho, largo, precio) VALUES (5, 5, 5, 2, 15, 50, 30, 20, 150);
+INSERT INTO EQUIPAJE (id_equipaje, id_boleto, id_vuelo, id_tipo_equipaje, peso, alto, ancho, largo, precio) VALUES (6, 6, 6, 3, 20, 60, 40, 30, 200);
 
 
 
@@ -994,5 +1117,24 @@ END;
 
 BEGIN
     sp_itinerario_pasajero(1);
+    sp_itinerario_pasajero(11);
 END;
 /
+
+-- Hacer check-in a todos los pasajeros del vuelo 1
+
+BEGIN
+    sp_checkin(1, 1, 1);
+    sp_checkin(2, 2, 1);
+    sp_checkin(3, 3, 1);
+    sp_checkin(4, 4, 1);
+    sp_checkin(5, 5, 1);
+    sp_checkin(6, 6, 1);
+    sp_checkin(7, 7, 1);
+    sp_checkin(8, 8, 1);
+    sp_checkin(9, 9, 1);
+    sp_checkin(10, 10, 1);
+END;
+/
+
+SELECT * FROM VUELO;
