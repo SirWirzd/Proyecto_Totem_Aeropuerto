@@ -11,6 +11,13 @@ connection = cx_Oracle.connect(user="admin", password="admin", dsn=dsn)
 
 cursor = connection.cursor()
 
+# Select de testeo
+
+cursor.execute("SELECT * FROM AEROLINEA")
+for row in cursor.fetchall():
+    print(row)
+
+
 # Generar datos simulados para la tabla VUELO
 def generar_vuelos(numero_vuelos):
     # Obtener IDs necesarios de tablas relacionadas
@@ -76,7 +83,7 @@ def generar_vuelos(numero_vuelos):
             print(f"Error inesperado: {e}")
 
 # Llamar a la función para generar datos
-generar_vuelos(50)
+generar_vuelos(2)
 
 # Cerrar la conexión
 cursor.close()
