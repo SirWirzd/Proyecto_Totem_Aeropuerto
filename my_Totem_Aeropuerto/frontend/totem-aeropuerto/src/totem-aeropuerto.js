@@ -15,6 +15,11 @@ const TotemAeropuerto = () => {
     const [itinerario, setItinerario] = useState([]);
     const [itinerarioError, setItinerarioError] = useState('');
 
+    // Estados para el Cambio de Asiento
+    const [idAsientoNuevo, setIdAsientoNuevo] = useState('');
+    const [cambioAsientoMessage, setCambioAsientoMessage] = useState('');
+    const [cambioAsientoError, setCambioAsientoError] = useState('');
+
     // Función para manejar el check-in
     const handleCheckin = async () => {
         try {
@@ -43,6 +48,22 @@ const TotemAeropuerto = () => {
         }
     };
 
+    // Función para manejar el cambio de asiento
+    const handleCambioAsiento = async () => {
+        try {
+            const response = await axios.post('http://localhost:3001/cambioasiento', {
+                id_boleto: idBoleto,
+                id_asiento_nuevo: idAsientoNuevo,
+            });
+
+            setCambioAsientoMessage(response.data.message || 'Asiento cambiado correctamente');
+            setCambioAsientoError('');
+        } catch (error) {
+            setCambioAsientoError('Error cambiando asiento: ' + (error.response?.data?.error || error.message));
+            setCambioAsientoMessage('');
+        }
+    };
+
     return (
         <div className="totem-aeropuerto">
             <h1>Tótem Aeropuerto</h1>
@@ -58,6 +79,12 @@ const TotemAeropuerto = () => {
                     onClick={() => setActiveTab('itinerario')}
                 >
                     Itinerario
+                </button>
+                <button
+                    className={activeTab === 'cambioasiento' ? 'active' : ''}
+                    onClick={() => setActiveTab('cambioasiento')}
+                >
+                    Cambio de Asiento
                 </button>
             </div>
 
@@ -137,6 +164,37 @@ const TotemAeropuerto = () => {
                         )}
 
                         {itinerarioError && <p className="error-message">{itinerarioError}</p>}
+                    </div>
+                )}
+
+                {activeTab === 'cambioasiento' && (
+                    <div className="cambio-asiento-section">
+                        <h2>Cambiar Asiento</h2>
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                handleCambioAsiento();
+                            }}
+                        >
+                            <label>ID Boleto:</label>
+                            <input
+                                type="text"
+                                value={idBoleto}
+                                onChange={(e) => setIdBoleto(e.target.value)}
+                                required
+                            />
+                            <label>ID Asiento Nuevo:</label>
+                            <input
+                                type="text"
+                                value={idAsientoNuevo}
+                                onChange={(e) => setIdAsientoNuevo(e.target.value)}
+                                required
+                            />
+                            <button type="submit">Cambiar Asiento</button>
+                        </form>
+
+                        {cambioAsientoMessage && <p className="success-message">{cambioAsientoMessage}</p>}
+                        {cambioAsientoError && <p className="error-message">{cambioAsientoError}</p>}
                     </div>
                 )}
             </div>

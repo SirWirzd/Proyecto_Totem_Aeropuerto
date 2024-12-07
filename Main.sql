@@ -755,28 +755,64 @@ EXCEPTION
 END;
 /
 
-
-
--- Actualizar el estado de un vuelo cuando todos los boletos están confirmados
-
-CREATE OR REPLACE PROCEDURE sp_actualizar_estado_vuelo (p_id_vuelo IN NUMBER)
-AS
-    v_boletos_pendientes NUMBER;
+-- Procedimiento para cambiar el asiento de un boleto
+CREATE OR REPLACE PROCEDURE sp_cambiar_asiento (
+    p_id_boleto IN NUMBER,
+    p_id_asiento_nuevo IN NUMBER
+) AS
+    v_id_vuelo NUMBER;
+    v_id_avion NUMBER;
+    v_estado_asiento VARCHAR2(15);
 BEGIN
-    -- Contar los boletos pendientes de confirmación
-    SELECT COUNT(*) INTO v_boletos_pendientes
+    -- Validar que el boleto exista
+    SELECT id_vuelo, id_avion
+    INTO v_id_vuelo, v_id_avion
     FROM BOLETO
-    WHERE id_vuelo = p_id_vuelo
-    AND estado = 'Pendiente';
+    WHERE id_boleto = p_id_boleto;
 
-    -- Actualizar el estado del vuelo si no hay boletos pendientes
-    IF v_boletos_pendientes = 0 THEN
-        UPDATE VUELO
-        SET id_estado = 3
-        WHERE id_vuelo = p_id_vuelo;
+    -- Verificar que el asiento nuevo esté disponible
+    SELECT estado
+    INTO v_estado_asiento
+    FROM ASIENTOS
+    WHERE id_asiento = p_id_asiento_nuevo
+      AND id_avion = v_id_avion;
+
+    IF v_estado_asiento != 'Disponible' THEN
+        RAISE_APPLICATION_ERROR(-20010, 'El asiento solicitado no está disponible.');
     END IF;
+
+    -- Liberar el asiento actual
+    UPDATE ASIENTOS
+    SET estado = 'Disponible'
+    WHERE id_asiento = (
+        SELECT id_asiento
+        FROM BOLETO
+        WHERE id_boleto = p_id_boleto
+    )
+      AND id_avion = v_id_avion;
+
+    -- Actualizar el asiento del boleto
+    UPDATE BOLETO
+    SET id_asiento = p_id_asiento_nuevo
+    WHERE id_boleto = p_id_boleto;
+
+    -- Ocupar el asiento nuevo
+    UPDATE ASIENTOS
+    SET estado = 'Ocupado'
+    WHERE id_asiento = p_id_asiento_nuevo
+      AND id_avion = v_id_avion;
+
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Asiento cambiado con éxito.');
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20011, 'No se encontró el boleto o el asiento especificado.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
 END;
 /
+
 
 -- Procedimiento para obtener los vuelos disponibles
 
