@@ -22,8 +22,8 @@ try {
 async function getConnection() {
     try {
         return await oracledb.getConnection({
-            user: process.env.DB_USER || 'admin',
-            password: process.env.DB_PASSWORD || 'admin',
+            user: process.env.DB_USER || 'ARTURO',
+            password: process.env.DB_PASSWORD || 'ARTURO',
             connectString: process.env.DB_CONNECTION || 'localhost:1521/xe',
         });
     } catch (err) {
@@ -98,27 +98,85 @@ app.get('/itinerario/:id_pasajero', async (req, res) => {
     }
 });
 
-// Ruta para obtener los asientos disponibles de un vuelo
-app.get('/asientosdisponibles/:idVuelo', async (req, res) => {
+// Ruta para obtener los detalles de un boleto
+app.get('/boleto/:idBoleto', async (req, res) => {
     let connection;
-    const { idVuelo } = req.params;
+    const { idBoleto } = req.params;
 
-    if (!idVuelo || isNaN(idVuelo)) {
-        return res.status(400).json({ error: 'ID de vuelo no válido. Debe ser un número positivo.' });
+    if (!idBoleto || isNaN(idBoleto)) {
+        return res.status(400).json({ error: 'ID de boleto no válido.' });
     }
 
     try {
         connection = await getConnection();
+
         const result = await connection.execute(
-            `SELECT id_asiento, numero_asiento 
-             FROM ASIENTOS 
-             WHERE id_avion = (
-                 SELECT id_avion FROM VUELO WHERE id_vuelo = :id_vuelo
-             ) AND estado = 'Disponible'`,
-            { id_vuelo: parseInt(idVuelo, 10) }
+            `SELECT v.id_vuelo, ad.ciudad AS ciudad_destino, a.numero_asiento AS asiento
+             FROM BOLETO b
+             JOIN VUELO v ON b.id_vuelo = v.id_vuelo
+             JOIN AEROPUERTO ad ON v.id_aeropuerto_destino = ad.id_aeropuerto
+             JOIN ASIENTOS a ON b.id_asiento = a.id_asiento
+             WHERE b.id_boleto = :id_boleto`,
+            { id_boleto: parseInt(idBoleto, 10) }
         );
 
-        res.json(result.rows.map((row) => ({ id_asiento: row[0], numero_asiento: row[1] })));
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'No se encontró el boleto.' });
+        }
+
+        const [vuelo, ciudad_destino, asiento] = result.rows[0];
+        res.json({ vuelo, ciudad_destino, asiento });
+    } catch (err) {
+        console.error('Error obteniendo detalles del boleto:', err.message);
+        res.status(500).json({ error: 'Error obteniendo detalles del boleto.', details: err.message });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error cerrando conexión:', err.message);
+            }
+        }
+    }
+});
+
+
+// Ruta para obtener los asientos disponibles basados en el id del boleto
+app.get('/asientosdisponiblesporboleto/:idBoleto', async (req, res) => {
+    let connection;
+    const { idBoleto } = req.params;
+
+    if (!idBoleto || isNaN(idBoleto)) {
+        return res.status(400).json({ error: 'ID de boleto no válido.' });
+    }
+
+    try {
+        connection = await getConnection();
+
+        // Consultar el vuelo y avión asociados al boleto
+        const vueloAvionResult = await connection.execute(
+            `SELECT v.id_vuelo, v.id_avion 
+             FROM BOLETO b 
+             JOIN VUELO v ON b.id_vuelo = v.id_vuelo 
+             WHERE b.id_boleto = :id_boleto`,
+            { id_boleto: parseInt(idBoleto, 10) }
+        );
+
+        if (vueloAvionResult.rows.length === 0) {
+            return res.status(404).json({ error: 'No se encontró información del vuelo para el boleto.' });
+        }
+
+        const [idVuelo, idAvion] = vueloAvionResult.rows[0];
+
+        // Obtener los asientos disponibles
+        const asientosResult = await connection.execute(
+            `SELECT id_asiento, numero_asiento 
+             FROM ASIENTOS 
+             WHERE id_avion = :id_avion AND estado = 'Disponible'`,
+            { id_avion: idAvion }
+        );
+
+        res.json(asientosResult.rows.map((row) => ({ id_asiento: row[0], numero_asiento: row[1] })));
     } catch (err) {
         console.error('Error obteniendo asientos disponibles:', err.message);
         res.status(500).json({ error: 'Error obteniendo asientos disponibles.', details: err.message });
@@ -132,46 +190,55 @@ app.get('/asientosdisponibles/:idVuelo', async (req, res) => {
         }
     }
 });
-
-/// Ruta para realizar el check-in
-app.post('/checkin', async (req, res) => {
+// Ruta para cambbiar el asiento 
+app.post('/cambioasiento', async (req, res) => {
     let connection;
     const { id_boleto, id_asiento_nuevo } = req.body;
 
-    // Validar que el ID de boleto sea proporcionado y válido
-    if (!id_boleto || isNaN(id_boleto)) {
-        return res.status(400).json({ error: 'ID de boleto es requerido y debe ser un número válido.' });
-    }
-    if (id_asiento_nuevo && isNaN(id_asiento_nuevo)) {
-        return res.status(400).json({ error: 'ID de asiento nuevo debe ser un número válido si se proporciona.' });
+    if (!id_boleto || isNaN(id_boleto) || !id_asiento_nuevo || isNaN(id_asiento_nuevo)) {
+        return res.status(400).json({ error: 'ID de boleto e ID de asiento nuevo son requeridos y deben ser números válidos.' });
     }
 
     try {
         connection = await getConnection();
 
-        // Paso opcional: Cambio de asiento antes del check-in
-        if (id_asiento_nuevo) {
-            await connection.execute(
-                `BEGIN sp_cambiar_asiento(:p_id_boleto, :p_id_asiento_nuevo); END;`,
-                {
-                    p_id_boleto: parseInt(id_boleto, 10),
-                    p_id_asiento_nuevo: parseInt(id_asiento_nuevo, 10),
-                },
-                { autoCommit: true }
-            );
-        }
-
-        // Realizar el check-in solo con el ID del boleto
+        // Cambiar el estado del asiento actual a "Disponible"
         await connection.execute(
-            `BEGIN sp_checkin(:p_id_boleto); END;`,
-            { p_id_boleto: parseInt(id_boleto, 10) },
-            { autoCommit: true }
+            `UPDATE ASIENTOS 
+             SET estado = 'Disponible' 
+             WHERE id_asiento = (
+                 SELECT id_asiento 
+                 FROM BOLETO 
+                 WHERE id_boleto = :id_boleto
+             )`,
+            { id_boleto: parseInt(id_boleto, 10) }
         );
 
-        res.json({ message: 'Check-in realizado correctamente.' });
+        // Actualizar el asiento en el boleto
+        await connection.execute(
+            `UPDATE BOLETO 
+             SET id_asiento = :id_asiento_nuevo 
+             WHERE id_boleto = :id_boleto`,
+            {
+                id_boleto: parseInt(id_boleto, 10),
+                id_asiento_nuevo: parseInt(id_asiento_nuevo, 10),
+            }
+        );
+
+        // Cambiar el estado del nuevo asiento a "Ocupado"
+        await connection.execute(
+            `UPDATE ASIENTOS 
+             SET estado = 'Ocupado' 
+             WHERE id_asiento = :id_asiento_nuevo`,
+            { id_asiento_nuevo: parseInt(id_asiento_nuevo, 10) }
+        );
+
+        await connection.commit(); // Confirmar los cambios
+
+        res.json({ message: 'Asiento cambiado correctamente.' });
     } catch (err) {
-        console.error('Error realizando check-in:', err.message);
-        res.status(500).json({ error: 'Error realizando el check-in.', details: err.message });
+        console.error('Error cambiando asiento:', err.message);
+        res.status(500).json({ error: 'Error cambiando asiento.', details: err.message });
     } finally {
         if (connection) {
             try {
@@ -182,6 +249,47 @@ app.post('/checkin', async (req, res) => {
         }
     }
 });
+
+
+/// Ruta para realizar el check-in
+app.post('/checkin', async (req, res) => {
+    let connection;
+    const { id_boleto } = req.body;
+
+    if (!id_boleto || isNaN(id_boleto)) {
+        return res.status(400).json({ error: 'ID de boleto no válido.' });
+    }
+
+    try {
+        connection = await getConnection();
+
+        // Llamar al procedimiento almacenado `sp_checkin`
+        await connection.execute(
+            `BEGIN sp_checkin(:p_id_boleto); END;`,
+            { p_id_boleto: parseInt(id_boleto, 10) },
+            { autoCommit: true }
+        );
+
+        res.json({ message: 'Check-in realizado correctamente.' });
+    } catch (err) {
+        if (err.errorNum === 20015) {
+            res.status(409).json({ error: 'El pasajero ya realizó el check-in para este asiento.' });
+        } else {
+            console.error('Error realizando check-in:', err.message);
+            res.status(500).json({ error: 'Error realizando el check-in.', details: err.message });
+        }
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error cerrando conexión:', err.message);
+            }
+        }
+    }
+});
+
+
 
 // Puerto del servidor
 const port = process.env.PORT || 3001;

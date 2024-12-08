@@ -534,12 +534,18 @@ FOR EACH ROW
 DECLARE
     v_estado VARCHAR2(15);
 BEGIN
-    SELECT estado INTO v_estado FROM BOLETO WHERE id_boleto = :NEW.id_boleto;
+    SELECT estado INTO v_estado
+    FROM BOLETO
+    WHERE id_boleto = :NEW.id_boleto;
+
     IF v_estado = 'Confirmado' THEN
         RAISE_APPLICATION_ERROR(-20000, 'El pasajero ya realizó el check-in para este vuelo.');
     END IF;
 END;
 /
+
+ALTER TRIGGER uq_checkin DISABLE;
+
 
 -- Bloquear cambios en los datos del vuelo después de su despegue
 
@@ -730,18 +736,64 @@ END;
 
 -- Procedimiento para registrar el check-in del boleto y cambiar su estado
 
-CREATE OR REPLACE PROCEDURE sp_checkin (
-    p_id_boleto IN NUMBER,
-    p_id_vuelo IN NUMBER
+CREATE OR REPLACE PROCEDURE SP_CHECKIN (
+    p_id_boleto IN NUMBER
 ) AS
+    v_id_vuelo NUMBER;
     v_id_checkin NUMBER;
+    v_asiento_actual NUMBER;
+    v_asiento_boleto NUMBER;
 BEGIN
-    -- Calcular el ID de check-in basado en la cantidad actual de registros
-    SELECT NVL(MAX(id_checkin), 0) + 1 INTO v_id_checkin FROM CHECK_IN;
+    -- Verificar si el boleto existe
+    BEGIN
+        SELECT id_vuelo, id_asiento INTO v_id_vuelo, v_asiento_boleto
+        FROM BOLETO
+        WHERE id_boleto = p_id_boleto;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20001, 'El boleto especificado no existe.');
+    END;
 
-    -- Insertar en la tabla CHECK_IN
+    -- Verificar si ya existe un check-in para el mismo vuelo y boleto
+    BEGIN
+        SELECT id_checkin INTO v_id_checkin
+        FROM CHECK_IN
+        WHERE id_boleto = p_id_boleto AND id_vuelo = v_id_vuelo;
+
+        -- Si existe, verificar si el asiento cambió
+        SELECT id_asiento INTO v_asiento_actual
+        FROM BOLETO
+        WHERE id_boleto = p_id_boleto;
+
+        IF v_asiento_actual = v_asiento_boleto THEN
+            RAISE_APPLICATION_ERROR(-20015, 'El pasajero ya realizó el check-in para este asiento.');
+        ELSE
+            -- Actualizar la fecha del check-in al cambiar el asiento
+            UPDATE CHECK_IN
+            SET fecha_checkin = SYSDATE
+            WHERE id_checkin = v_id_checkin;
+
+            -- Actualizar el estado del boleto
+            UPDATE BOLETO
+            SET estado = 'Confirmado'
+            WHERE id_boleto = p_id_boleto;
+
+            COMMIT;
+            RETURN;
+        END IF;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            -- Si no existe, proceder con el nuevo check-in
+            NULL;
+    END;
+
+    -- Generar un nuevo ID para el check-in
+    SELECT NVL(MAX(id_checkin), 0) + 1 INTO v_id_checkin
+    FROM CHECK_IN;
+
+    -- Insertar el nuevo registro de check-in
     INSERT INTO CHECK_IN (id_checkin, id_boleto, id_vuelo, fecha_checkin)
-    VALUES (v_id_checkin, p_id_boleto, p_id_vuelo, SYSDATE);
+    VALUES (v_id_checkin, p_id_boleto, v_id_vuelo, SYSDATE);
 
     -- Actualizar el estado del boleto
     UPDATE BOLETO
@@ -755,6 +807,10 @@ EXCEPTION
         RAISE;
 END;
 /
+
+
+
+
 
 CREATE OR REPLACE PROCEDURE sp_cambiar_asiento (
     p_id_boleto IN NUMBER,
@@ -900,6 +956,20 @@ CREATE OR REPLACE PROCEDURE sp_itinerario_pasajero (
     o_itinerario OUT SYS_REFCURSOR
 ) AS
 BEGIN
+    -- Validar que el pasajero exista antes de abrir el cursor
+    DECLARE
+        v_existe_pasajero NUMBER;
+    BEGIN
+        SELECT COUNT(*)
+        INTO v_existe_pasajero
+        FROM PASAJERO
+        WHERE id_pasajero = p_id_pasajero;
+
+        IF v_existe_pasajero = 0 THEN
+            RAISE_APPLICATION_ERROR(-20001, 'El ID del pasajero no existe.');
+        END IF;
+    END;
+
     -- Abrir el cursor para devolver los datos del itinerario
     OPEN o_itinerario FOR
         SELECT 
@@ -926,14 +996,15 @@ BEGIN
         JOIN TERMINAL_PUERTA t ON v.id_terminal = t.id_terminal
         JOIN PUERTA pu ON v.id_puerta = pu.id_puerta
         WHERE b.id_pasajero = p_id_pasajero;
+
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        DBMS_OUTPUT.PUT_LINE('No se encontró ningún itinerario para el pasajero.');
+        RAISE_APPLICATION_ERROR(-20002, 'No se encontró ningún itinerario asociado al pasajero.');
     WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
-        RAISE;
+        RAISE_APPLICATION_ERROR(-20003, 'Error inesperado: ' || SQLERRM);
 END;
 /
+
 
 
 -- Procedimiento para registrar servicios adicionales en masa
@@ -1182,10 +1253,5 @@ END;
 /
 
 -- Hacer check-in a todos los pasajeros del vuelo 1
-
-BEGIN
-    sp_checkin(1, 1);
-END;
-/
 
 SELECT * FROM VUELO;
