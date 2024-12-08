@@ -10,7 +10,13 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Configuración del cliente Oracle
-oracledb.initOracleClient({ libDir: 'C:\\oracle\\instantclient' });
+try {
+    oracledb.initOracleClient({ libDir: 'C:\\oraclexe\\instantclient_21_15' });
+    console.log('Cliente Oracle inicializado correctamente.');
+} catch (err) {
+    console.error('Error inicializando cliente Oracle:', err.message);
+    process.exit(1);
+}
 
 // Función para obtener la conexión
 async function getConnection() {
@@ -21,24 +27,29 @@ async function getConnection() {
             connectString: process.env.DB_CONNECTION || 'localhost:1521/xe',
         });
     } catch (err) {
-        console.error('Error conectando a Oracle:', err.message);
+        console.error('Error obteniendo conexión:', err.message);
         throw err;
     }
 }
 
-// Ruta para obtener el itinerario del pasajero del procedimiento sp_itinerario_pasajero
-
+// Ruta para obtener el itinerario del pasajero
 app.get('/itinerario/:id_pasajero', async (req, res) => {
     let connection;
     const { id_pasajero } = req.params;
 
+    if (!id_pasajero || isNaN(id_pasajero) || parseInt(id_pasajero, 10) <= 0) {
+        return res.status(400).json({ error: 'ID de pasajero no válido. Debe ser un número positivo.' });
+    }
+
     try {
         connection = await getConnection();
+
+        // Ejecutar el procedimiento almacenado
         const result = await connection.execute(
             `BEGIN sp_itinerario_pasajero(:id_pasajero, :o_itinerario); END;`,
             {
                 id_pasajero: parseInt(id_pasajero, 10),
-                o_itinerario: { type: oracledb.CURSOR, dir: oracledb.BIND_OUT }
+                o_itinerario: { type: oracledb.CURSOR, dir: oracledb.BIND_OUT },
             }
         );
 
@@ -67,10 +78,15 @@ app.get('/itinerario/:id_pasajero', async (req, res) => {
         }
 
         await cursor.close();
-        res.json(rows);
+
+        if (rows.length > 0) {
+            res.json(rows);
+        } else {
+            res.status(404).json({ error: 'No se encontró ningún itinerario para el pasajero.' });
+        }
     } catch (err) {
-        console.error('Error ejecutando procedimiento:', err.message);
-        res.status(500).json({ error: 'Error ejecutando procedimiento' });
+        console.error('Error ejecutando sp_itinerario_pasajero:', err.message);
+        res.status(500).json({ error: 'Error obteniendo itinerario.', details: err.message });
     } finally {
         if (connection) {
             try {
@@ -82,70 +98,31 @@ app.get('/itinerario/:id_pasajero', async (req, res) => {
     }
 });
 
-// Ruta para obtener el cambio de asiento de un pasajero del procedimiento sp_cambio_asiento
-app.get('/cambioasiento/:id_boleto', async (req, res) => {
+// Ruta para obtener los asientos disponibles de un vuelo
+app.get('/asientosdisponibles/:idVuelo', async (req, res) => {
     let connection;
-    const { id_boleto } = req.params;
+    const { idVuelo } = req.params;
+
+    if (!idVuelo || isNaN(idVuelo)) {
+        return res.status(400).json({ error: 'ID de vuelo no válido. Debe ser un número positivo.' });
+    }
 
     try {
-        // Validación del parámetro
-        if (isNaN(id_boleto)) {
-            return res.status(400).json({ error: 'El id_boleto debe ser un número válido.' });
-        }
-
-        // Establecer conexión
         connection = await getConnection();
-
-        // Ejecutar el procedimiento
         const result = await connection.execute(
-            `BEGIN sp_cambio_asiento(:id_boleto, :o_cambio_asiento); END;`,
-            {
-                id_boleto: parseInt(id_boleto, 10),
-                o_cambio_asiento: { type: oracledb.CURSOR, dir: oracledb.BIND_OUT }
-            }
+            `SELECT id_asiento, numero_asiento 
+             FROM ASIENTOS 
+             WHERE id_avion = (
+                 SELECT id_avion FROM VUELO WHERE id_vuelo = :id_vuelo
+             ) AND estado = 'Disponible'`,
+            { id_vuelo: parseInt(idVuelo, 10) }
         );
 
-        const cursor = result.outBinds.o_cambio_asiento;
-        const rows = [];
-
-        try {
-            // Leer las filas del cursor
-            let row;
-            while ((row = await cursor.getRow())) {
-                rows.push({
-                    pasajero: row[0],
-                    dni: row[1],
-                    boleto: row[2],
-                    vuelo: row[3],
-                    fecha_salida: row[4],
-                    hora_salida: row[5],
-                    fecha_llegada: row[6],
-                    hora_llegada: row[7],
-                    ciudad_origen: row[8],
-                    ciudad_destino: row[9],
-                    asiento: row[10],
-                    terminal: row[11],
-                    puerta: row[12],
-                    estado_boleto: row[13],
-                });
-            }
-        } catch (err) {
-            console.error('Error al leer el cursor:', err.message);
-            return res.status(500).json({ error: 'Error al procesar los datos del cursor.' });
-        } finally {
-            // Cerrar el cursor
-            if (cursor) {
-                await cursor.close();
-            }
-        }
-
-        // Enviar la respuesta
-        res.json(rows);
+        res.json(result.rows.map((row) => ({ id_asiento: row[0], numero_asiento: row[1] })));
     } catch (err) {
-        console.error('Error ejecutando procedimiento:', err.message);
-        res.status(500).json({ error: 'Error ejecutando procedimiento' });
+        console.error('Error obteniendo asientos disponibles:', err.message);
+        res.status(500).json({ error: 'Error obteniendo asientos disponibles.', details: err.message });
     } finally {
-        // Cerrar la conexión
         if (connection) {
             try {
                 await connection.close();
@@ -156,81 +133,45 @@ app.get('/cambioasiento/:id_boleto', async (req, res) => {
     }
 });
 
-
-// Ruta POST para realizar check-in
-
+/// Ruta para realizar el check-in
 app.post('/checkin', async (req, res) => {
     let connection;
-    const { id_boleto, id_vuelo, identificador, tipo_identificador } = req.body;
+    const { id_boleto, id_asiento_nuevo } = req.body;
+
+    // Validar que el ID de boleto sea proporcionado y válido
+    if (!id_boleto || isNaN(id_boleto)) {
+        return res.status(400).json({ error: 'ID de boleto es requerido y debe ser un número válido.' });
+    }
+    if (id_asiento_nuevo && isNaN(id_asiento_nuevo)) {
+        return res.status(400).json({ error: 'ID de asiento nuevo debe ser un número válido si se proporciona.' });
+    }
 
     try {
         connection = await getConnection();
 
-        let boletoId = id_boleto;
-
-        // Si se proporciona un identificador flexible, buscar el ID del boleto
-        if (!boletoId && identificador && tipo_identificador) {
-            if (tipo_identificador === 'numero_compra') {
-                const result = await connection.execute(
-                    `SELECT id_boleto FROM BOLETO WHERE id_boleto = :identificador`,
-                    { identificador: parseInt(identificador, 10) }
-                );
-                if (result.rows.length === 0) {
-                    throw new Error('Número de compra no encontrado.');
-                }
-                boletoId = result.rows[0][0];
-            } else if (tipo_identificador === 'documento_identidad') {
-                const result = await connection.execute(
-                    `SELECT id_boleto FROM BOLETO b
-                     JOIN PASAJERO p ON b.id_pasajero = p.id_pasajero
-                     WHERE p.dni_pasajero = :identificador`,
-                    { identificador }
-                );
-                if (result.rows.length === 0) {
-                    throw new Error('Documento de identidad no encontrado.');
-                }
-                boletoId = result.rows[0][0];
-            } else if (tipo_identificador === 'pasaporte') {
-                const result = await connection.execute(
-                    `SELECT id_boleto FROM BOLETO b
-                     JOIN PASAJERO p ON b.id_pasajero = p.id_pasajero
-                     WHERE p.pasaporte = :identificador`,
-                    { identificador }
-                );
-                if (result.rows.length === 0) {
-                    throw new Error('Pasaporte no encontrado.');
-                }
-                boletoId = result.rows[0][0];
-            } else {
-                throw new Error('Tipo de identificador no válido.');
-            }
+        // Paso opcional: Cambio de asiento antes del check-in
+        if (id_asiento_nuevo) {
+            await connection.execute(
+                `BEGIN sp_cambiar_asiento(:p_id_boleto, :p_id_asiento_nuevo); END;`,
+                {
+                    p_id_boleto: parseInt(id_boleto, 10),
+                    p_id_asiento_nuevo: parseInt(id_asiento_nuevo, 10),
+                },
+                { autoCommit: true }
+            );
         }
 
-        // Validar que el ID del boleto esté presente
-        if (!boletoId) {
-            throw new Error('No se pudo determinar el ID del boleto.');
-        }
-
-        // Ejecutar el procedimiento almacenado sp_checkin
+        // Realizar el check-in solo con el ID del boleto
         await connection.execute(
-            `BEGIN sp_checkin(:p_id_boleto, :p_id_vuelo); END;`,
-            {
-                p_id_boleto: parseInt(boletoId, 10),
-                p_id_vuelo: parseInt(id_vuelo, 10),
-            }
+            `BEGIN sp_checkin(:p_id_boleto); END;`,
+            { p_id_boleto: parseInt(id_boleto, 10) },
+            { autoCommit: true }
         );
 
-        res.json({
-            message: 'Check-in registrado correctamente.',
-            id_boleto: boletoId,
-            id_vuelo,
-        });
+        res.json({ message: 'Check-in realizado correctamente.' });
     } catch (err) {
-        console.error('Error ejecutando el procedimiento de check-in:', err.message);
-        res.status(500).json({
-            error: 'Error realizando el check-in.',
-            details: err.message,
-        });
+        console.error('Error realizando check-in:', err.message);
+        res.status(500).json({ error: 'Error realizando el check-in.', details: err.message });
     } finally {
         if (connection) {
             try {
@@ -242,8 +183,7 @@ app.post('/checkin', async (req, res) => {
     }
 });
 
-
-// Puerto de la aplicación
+// Puerto del servidor
 const port = process.env.PORT || 3001;
 app.listen(port, () => {
     console.log(`Servidor corriendo en el puerto ${port}`);

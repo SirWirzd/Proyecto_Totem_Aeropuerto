@@ -547,28 +547,8 @@ CREATE OR REPLACE TRIGGER tg_bloquear_cambios_vuelo
 BEFORE UPDATE ON VUELO
 FOR EACH ROW
 BEGIN
-    IF :OLD.id_estado IN (2, 6) THEN -- "En Vuelo" o "Aterrizado"
+    IF :OLD.id_estado IN (2, 6) AND :NEW.id_estado != 5 THEN -- "En Vuelo" o "Aterrizado"
         RAISE_APPLICATION_ERROR(-20002, 'No se puede modificar un vuelo que ya está en curso o finalizado.');
-    END IF;
-END;
-/
-
--- Validad que un asiento no pueda asignarse a más de un boleto
-
-CREATE OR REPLACE TRIGGER tg_validar_asiento_unico
-BEFORE INSERT OR UPDATE OF id_asiento ON BOLETO
-FOR EACH ROW
-DECLARE
-    v_asiento_ocupado NUMBER;
-BEGIN
-    IF :NEW.id_asiento IS NOT NULL AND :NEW.id_vuelo IS NOT NULL THEN
-        SELECT COUNT(*) INTO v_asiento_ocupado 
-        FROM BOLETO
-        WHERE id_asiento = :NEW.id_asiento AND id_vuelo = :NEW.id_vuelo;
-
-        IF v_asiento_ocupado > 0 THEN
-            RAISE_APPLICATION_ERROR(-20003, 'El asiento ya está asignado a otro boleto.');
-        END IF;
     END IF;
 END;
 /
@@ -670,6 +650,27 @@ BEGIN
 END;
 /
 
+-- Control para asignar un asiento 
+CREATE OR REPLACE TRIGGER tg_actualizar_estado_asiento
+AFTER INSERT OR UPDATE OF id_asiento ON BOLETO
+FOR EACH ROW
+BEGIN
+    -- Actualizar el estado del asiento a "Ocupado" si se asigna a un boleto
+    IF :NEW.id_asiento IS NOT NULL THEN
+        UPDATE ASIENTOS
+        SET estado = 'Ocupado'
+        WHERE id_asiento = :NEW.id_asiento AND id_avion = :NEW.id_avion;
+    END IF;
+
+    -- Liberar el asiento si se elimina el registro del boleto o se cambia el asiento
+    IF :OLD.id_asiento IS NOT NULL AND :OLD.id_asiento != :NEW.id_asiento THEN
+        UPDATE ASIENTOS
+        SET estado = 'Disponible'
+        WHERE id_asiento = :OLD.id_asiento AND id_avion = :OLD.id_avion;
+    END IF;
+END;
+/
+
 -- Control de cancelacion de vuelo y boletos asociados
 
 CREATE OR REPLACE TRIGGER tg_cancelar_boletos_vuelo
@@ -755,7 +756,6 @@ EXCEPTION
 END;
 /
 
--- Procedimiento para cambiar el asiento de un boleto
 CREATE OR REPLACE PROCEDURE sp_cambiar_asiento (
     p_id_boleto IN NUMBER,
     p_id_asiento_nuevo IN NUMBER
@@ -763,53 +763,93 @@ CREATE OR REPLACE PROCEDURE sp_cambiar_asiento (
     v_id_vuelo NUMBER;
     v_id_avion NUMBER;
     v_estado_asiento VARCHAR2(15);
+    v_asiento_actual NUMBER;
+    v_asiento_ocupado NUMBER;
 BEGIN
-    -- Validar que el boleto exista
-    SELECT id_vuelo, id_avion
-    INTO v_id_vuelo, v_id_avion
+    -- 1. Obtener el vuelo, avión y asiento actual asociado al boleto
+    SELECT id_vuelo, id_avion, id_asiento
+    INTO v_id_vuelo, v_id_avion, v_asiento_actual
     FROM BOLETO
     WHERE id_boleto = p_id_boleto;
 
-    -- Verificar que el asiento nuevo esté disponible
+    -- 2. Validar que el nuevo asiento no sea el mismo que el actual
+    IF v_asiento_actual = p_id_asiento_nuevo THEN
+        RAISE_APPLICATION_ERROR(-20012, 'El asiento solicitado ya está asignado a este boleto.');
+    END IF;
+
+    -- 3. Verificar que el asiento nuevo esté disponible
     SELECT estado
     INTO v_estado_asiento
     FROM ASIENTOS
-    WHERE id_asiento = p_id_asiento_nuevo
-      AND id_avion = v_id_avion;
+    WHERE id_asiento = p_id_asiento_nuevo AND id_avion = v_id_avion;
 
     IF v_estado_asiento != 'Disponible' THEN
         RAISE_APPLICATION_ERROR(-20010, 'El asiento solicitado no está disponible.');
     END IF;
 
-    -- Liberar el asiento actual
-    UPDATE ASIENTOS
-    SET estado = 'Disponible'
-    WHERE id_asiento = (
-        SELECT id_asiento
-        FROM BOLETO
-        WHERE id_boleto = p_id_boleto
-    )
-      AND id_avion = v_id_avion;
+    -- 4. Validar que el asiento no esté asignado a otro boleto del mismo vuelo
+    SELECT COUNT(*)
+    INTO v_asiento_ocupado
+    FROM BOLETO
+    WHERE id_asiento = p_id_asiento_nuevo AND id_vuelo = v_id_vuelo;
 
-    -- Actualizar el asiento del boleto
+    IF v_asiento_ocupado > 0 THEN
+        RAISE_APPLICATION_ERROR(-20013, 'El asiento solicitado ya está asignado a otro boleto.');
+    END IF;
+
+    -- 5. Liberar el asiento actual (si existe)
+    IF v_asiento_actual IS NOT NULL THEN
+        UPDATE ASIENTOS
+        SET estado = 'Disponible'
+        WHERE id_asiento = v_asiento_actual AND id_avion = v_id_avion;
+    END IF;
+
+    -- 6. Actualizar el boleto con el nuevo asiento
     UPDATE BOLETO
     SET id_asiento = p_id_asiento_nuevo
     WHERE id_boleto = p_id_boleto;
 
-    -- Ocupar el asiento nuevo
+    -- 7. Marcar el nuevo asiento como ocupado
     UPDATE ASIENTOS
     SET estado = 'Ocupado'
-    WHERE id_asiento = p_id_asiento_nuevo
-      AND id_avion = v_id_avion;
+    WHERE id_asiento = p_id_asiento_nuevo AND id_avion = v_id_avion;
 
+    -- Confirmar los cambios
     COMMIT;
-    DBMS_OUTPUT.PUT_LINE('Asiento cambiado con éxito.');
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
         RAISE_APPLICATION_ERROR(-20011, 'No se encontró el boleto o el asiento especificado.');
     WHEN OTHERS THEN
         ROLLBACK;
-        RAISE;
+        RAISE_APPLICATION_ERROR(-20000, 'Error inesperado: ' || SQLERRM);
+END;
+/
+
+
+
+-- Procedimiento para obtener los asientos disponibles de un vuelo
+CREATE OR REPLACE PROCEDURE sp_asientos_disponibles (
+    p_id_vuelo IN NUMBER,
+    o_asientos OUT SYS_REFCURSOR
+) AS
+BEGIN
+    -- Obtener el ID del avión asociado al vuelo
+    DECLARE
+        v_id_avion NUMBER;
+    BEGIN
+        SELECT id_avion INTO v_id_avion
+        FROM VUELO
+        WHERE id_vuelo = p_id_vuelo;
+
+        -- Abrir un cursor con los asientos disponibles
+        OPEN o_asientos FOR
+        SELECT id_asiento, numero_asiento
+        FROM ASIENTOS
+        WHERE id_avion = v_id_avion AND estado = 'Disponible';
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20001, 'No se encontró un avión para el vuelo proporcionado.');
+    END;
 END;
 /
 
@@ -887,7 +927,10 @@ BEGIN
         JOIN PUERTA pu ON v.id_puerta = pu.id_puerta
         WHERE b.id_pasajero = p_id_pasajero;
 EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('No se encontró ningún itinerario para el pasajero.');
     WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
         RAISE;
 END;
 /
@@ -1130,17 +1173,18 @@ END;
 /
 
 -- itinerario de un pasajero
-
+DECLARE
+    v_itinerario SYS_REFCURSOR;
 BEGIN
-    sp_itinerario_pasajero(1);
-    sp_itinerario_pasajero(11);
+    sp_itinerario_pasajero(1,v_itinerario);
+    sp_itinerario_pasajero(11, v_itinerario);
 END;
 /
 
 -- Hacer check-in a todos los pasajeros del vuelo 1
 
 BEGIN
-    sp_checkin(1, 1, 1);
+    sp_checkin(1, 1);
 END;
 /
 
